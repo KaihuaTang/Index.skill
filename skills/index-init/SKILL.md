@@ -38,6 +38,7 @@ mkdir -p ./IndexVault/_new \
          ./IndexVault/_images \
          ./IndexVault/_downloads \
          ./IndexVault/_template \
+         ./IndexVault/_chat \
          ./IndexVault/.obsidian
 ```
 
@@ -63,7 +64,39 @@ Write the following config files to `./IndexVault/.obsidian/`:
 
 **core-plugins.json**:
 ```json
-["file-explorer","global-search","switcher","graph","backlink","canvas","outgoing-link","tag-pane","properties","page-preview","note-composer","command-palette","editor-status","bookmarks","markdown-importer","word-count","file-recovery","outline"]
+{
+  "file-explorer": true,
+  "global-search": true,
+  "switcher": true,
+  "graph": true,
+  "backlink": true,
+  "outgoing-link": true,
+  "tag-pane": true,
+  "page-preview": true,
+  "daily-notes": false,
+  "templates": false,
+  "note-composer": true,
+  "command-palette": true,
+  "slash-command": false,
+  "editor-status": true,
+  "markdown-importer": true,
+  "zk-prefixer": false,
+  "random-note": false,
+  "outline": true,
+  "word-count": true,
+  "slides": false,
+  "audio-recorder": false,
+  "workspaces": false,
+  "file-recovery": true,
+  "publish": false,
+  "sync": false,
+  "canvas": true,
+  "footnotes": false,
+  "properties": true,
+  "bookmarks": true,
+  "bases": true,
+  "webviewer": false
+}
 ```
 
 **app.json**:
@@ -206,15 +239,30 @@ Based on the MBTI type, automatically derive the following 5 cognitive traits. U
 
 - **E + T types** → **偏向趋近(BAS)**: 积极追求目标和奖励，风险容忍度高
 - **I + F types** → **偏向回避(BIS)**: 谨慎评估风险，倾向规避不确定性
-- Other combinations → **平衡型**: 描述具体倾向
+- **E + F types** → **平衡偏趋近**: 外向特质驱动社交趋近，但情感特质增添谨慎
+- **I + T types** → **平衡偏回避**: 内向特质倾向回避，但理性特质降低情绪化回避
 
 ### 7e: Exploration vs Exploitation (探索 vs 利用)
 
 - **N + P types** (xNxP) → **偏向探索**: 倾向尝试新方法、新视角，容忍不确定性
 - **S + J types** (xSxJ) → **偏向利用**: 倾向优化已有方法，追求可靠性和效率
-- Other combinations → **情境适应**: 描述具体倾向
+- **N + J types** (xNxJ) → **情境适应偏利用**: 有直觉驱动的探索能力，但判断特质使其更倾向优化和执行已验证路径
+- **S + P types** (xSxP) → **情境适应偏探索**: 感觉特质偏好具体经验，但知觉特质使其对新体验保持开放
 
-## Step 8: Generate persona.md
+## Step 8: Ask Optional Extra Traits (可选额外性格特质)
+
+After deriving cognitive traits, ask the user:
+
+> **（可选）您是否希望为 Agent 添加额外的性格特质？**
+>
+> 例如：聊天风格、说话习惯、语气偏好、特定口头禅、角色扮演设定等，任意文本均可。
+> 这些特质后续也可以通过聊天随时更新。
+>
+> 如果不需要，直接回复"跳过"或"无"即可。
+
+Record the user's answer as `EXTRA_TRAITS`. If the user skips, set `EXTRA_TRAITS` to empty/null.
+
+## Step 9: Generate persona.md
 
 Create `./IndexVault/persona.md` with the following structure:
 
@@ -245,11 +293,15 @@ created: "YYYY-MM-DD"
 | 分析型/整体型 | {{TRAIT_3}} | {{BRIEF_3}} |
 | 趋近/回避导向 | {{TRAIT_4}} | {{BRIEF_4}} |
 | 探索/利用倾向 | {{TRAIT_5}} | {{BRIEF_5}} |
+
+## Extra Traits (额外性格特质)
+
+{{EXTRA_TRAITS or "暂无额外设定。可随时通过聊天添加。"}}
 ```
 
-Keep the entire file concise -- the MBTI description should be 3-5 sentences, and each cognitive trait explanation should be one sentence.
+Keep the entire file concise -- the MBTI description should be 3-5 sentences, and each cognitive trait explanation should be one sentence. The Extra Traits section should preserve the user's original text as-is.
 
-## Step 9: Report to User
+## Step 10: Report to User
 
 After completing all steps, display:
 1. Vault directory structure created

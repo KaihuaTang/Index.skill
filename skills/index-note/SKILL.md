@@ -275,7 +275,7 @@ Only embed the most informative images (typically 3-5 max). Skip redundant or lo
 ### Step 4a: Get next ID
 
 ```bash
-uv run python ./skills/index-note/scripts/generate_id.py --type TYPE --vault-new-dir ./IndexVault/_new/
+uv run python ./skills/index-note/scripts/generate_id.py --type TYPE --vault-new-dir ./IndexVault/_new/ --vault-deep-dir ./IndexVault/deep/
 ```
 
 This returns a 3-digit ID (e.g., `001`).
@@ -332,12 +332,12 @@ Write the completed note to:
 ./IndexVault/_new/YYYY-MM-DD_TYPE_NNN.md
 ```
 
-**IMPORTANT**: Every note must end with a read-status checkbox (after a `---` separator) so users can mark it as read in Obsidian:
+**IMPORTANT**: Every note must end with a read-status checkbox (after a `---` separator) so users can mark it as read in Obsidian. The `<big><big>` tags make it visually prominent:
 
 ```markdown
 ---
 
-- [ ] 已读
+- [ ] <big><big>已读</big></big>
 ```
 
 ### Step 4f: Finalize images

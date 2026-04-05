@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-茵蒂克丝.skill（LLM Wiki）is a knowledge management system built as Claude Code skills. It captures arbitrary input (text, URLs, files, folders), auto-classifies it into 6 types, and produces structured Obsidian notes with extracted images.
+茵蒂克丝.skill（LLM Wiki）is a knowledge management system built as Claude Code skills. It captures arbitrary input (text, URLs, files, folders), auto-classifies it into 6 types, and produces structured Obsidian notes with extracted images. It also provides persona-driven chat with memory-augmented retrieval.
 
 ## Skills
 
-Three complementary skills in `skills/`:
+Four complementary skills in `skills/`:
 
 - **index-init** (`/index-init`): First-run setup. Creates the Obsidian vault directory structure, copies templates from `skills/index-init/resources/` to the vault, and generates `persona.md` via interactive MBTI questionnaire.
 - **index-note** (`/index-note INPUT`): Core skill. Classifies input → downloads content if needed → extracts images → fills type-specific template → writes note to `_new/`.
-- **index-update** (`/index-update`): Knowledge organizer. Scans `_new/` for notes marked "已读" → extracts knowledge items → classifies into 4-type hierarchical memory system (`memory/`) → archives note to `deep/`.
+- **index-chat** (`/index-chat INPUT`): Chat skill. Loads persona from `persona.md` → extracts keywords from user input → retrieves relevant knowledge from `memory/` via layered navigation → responds in persona style with references → saves conversation to `_chat/`.
+- **index-update** (`/index-update`): Knowledge organizer. Scans `_new/` for notes marked "已读" → extracts knowledge items → classifies into 4-type hierarchical memory system (`memory/`) → archives note to `deep/`. Also processes `_chat/` logs: applies persona updates to `persona.md`, extracts user-provided knowledge, and archives chat files to `deep/`.
 
 Each skill is defined by a `SKILL.md` file with frontmatter:
 ```yaml
@@ -35,7 +36,8 @@ IndexVault/memory/       Hierarchical knowledge base (see Memory System below)
 IndexVault/_template/    6 note templates (idea/project/book/paper/webinfo/webnews)
 IndexVault/_images/      Extracted images, organized per-note ({note_id}/{note_id}_{nn}.ext)
 IndexVault/_downloads/   Downloaded source material
-IndexVault/persona.md    Agent personality config (created by index-init)
+IndexVault/_chat/        Chat logs (YYYY-MM-DD_Chat.md, archived to deep/ by index-update)
+IndexVault/persona.md    Agent personality config (created by index-init, updated by index-update from chat logs)
 ```
 
 ## Memory System
@@ -69,8 +71,8 @@ Python is accessed via `uv` (no system Python installed):
 # Classification
 uv run python ./skills/index-note/scripts/classify_input.py --input "INPUT_STRING"
 
-# ID generation
-uv run python ./skills/index-note/scripts/generate_id.py --type TYPE --vault-new-dir ./IndexVault/_new/
+# ID generation (scans both _new/ and deep/ to avoid collisions after archiving)
+uv run python ./skills/index-note/scripts/generate_id.py --type TYPE --vault-new-dir ./IndexVault/_new/ --vault-deep-dir ./IndexVault/deep/
 
 # Image extraction to temp dir (needs PyMuPDF)
 uv run --with pymupdf --with requests python ./skills/index-note/scripts/extract_images.py \
@@ -111,6 +113,20 @@ Templates are based on cognitive science research:
 - **Typed connections**: Classify relationships as supports/contradicts/extends, not just list links
 - **Retrieval cues**: End with scenario triggers ("when would I come back to this?")
 - **So What?**: Every note answers "how does this change what I do?"
+
+## Safe Move (Archiving to deep/)
+
+When moving files from `_new/` or `_chat/` to `deep/`, always check for filename collisions. If a file with the same name already exists in `deep/`, append a random hex suffix before the `.md` extension:
+
+```bash
+FILENAME="{original}.md"
+TARGET="./IndexVault/deep/$FILENAME"
+if [ -f "$TARGET" ]; then
+    BASENAME="${FILENAME%.md}"
+    SUFFIX=$(od -An -tx1 -N4 /dev/urandom | tr -d ' \n')
+    FILENAME="${BASENAME}_${SUFFIX}.md"
+fi
+```
 
 ## Template Source of Truth
 
