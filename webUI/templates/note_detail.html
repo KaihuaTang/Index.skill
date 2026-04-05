@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}茵蒂克丝.skill - 笔记详情{% endblock %}
+
+{% block nav_extra %}
+<a href="/vault" class="btn btn-outline-light btn-sm ms-auto">
+    <i class="bi bi-arrow-left me-1"></i>返回列表
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div id="note-loading" class="text-center py-5">
+            <div class="spinner-border"></div>
+            <p class="text-muted mt-2">加载笔记中...</p>
+        </div>
+        <div id="note-error" class="d-none text-center py-5">
+            <i class="bi bi-exclamation-circle text-danger" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-2">笔记加载失败</p>
+        </div>
+        <div id="note-content" class="d-none">
+            <!-- Metadata bar -->
+            <div class="note-meta-bar mb-4">
+                <span class="badge note-type-badge" id="note-type-badge"></span>
+                <span class="text-muted ms-2" id="note-date"></span>
+                <span class="ms-2" id="note-tags"></span>
+            </div>
+            <h2 id="note-title" class="mb-4"></h2>
+            <!-- Rendered markdown body -->
+            <div id="note-body" class="obsidian-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const filename = "{{ filename }}";
+    document.addEventListener('DOMContentLoaded', () => loadNoteDetail(filename));
+</script>
+{% endblock %}
