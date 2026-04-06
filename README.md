@@ -32,6 +32,18 @@
 
 ---
 
+## 🪅 运行效果图
+
+基于本项目当前自带的测试IndexVault的聊天效果图与Obsidian界面截图。
+
+<div align="center">
+
+<img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="100%"/>
+
+</div>
+
+---
+
 ## 🔄 Workflow
 
 ```
@@ -43,16 +55,6 @@
  生成 persona.md       写入 _new/               写入 memory/ & deep/          写入 _chat/
 ```
 ---
-
-## 🪅 效果图
-
-基于本项目当前自带的测试IndexVault的聊天效果图与Obsidian界面截图。
-
-<div align="center">
-
-<img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="100%"/>
-
-</div>
 
 ## 🚀 Quick Start
 
