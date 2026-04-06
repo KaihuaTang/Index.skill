@@ -45,7 +45,7 @@
 
 <div align="center">
 
-<img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="75%"/>
+<img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="100%"/>
 
 </div>
 
