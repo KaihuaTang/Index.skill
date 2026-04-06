@@ -42,14 +42,17 @@
  配置 MBTI 人格        6 种模板智能填充          聊天记录 → 人格更新 → 归档     生成回答 → 保存对话
  生成 persona.md       写入 _new/               写入 memory/ & deep/          写入 _chat/
 ```
+---
+
+## 🪅 效果图
+
+基于本项目当前自带的测试IndexVault的聊天效果图与Obsidian界面截图。
 
 <div align="center">
 
 <img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="100%"/>
 
 </div>
-
----
 
 ## 🚀 Quick Start
 
