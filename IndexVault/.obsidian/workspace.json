@@ -1,0 +1,231 @@
+{
+  "main": {
+    "id": "4bf31e227b0b8583",
+    "type": "split",
+    "children": [
+      {
+        "id": "bd6f0c0e94275f99",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8cc7028ae56d35d6",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "_chat/2026-04-06_Chat.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2026-04-06_Chat"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "90f487d1eb850eff",
+    "type": "split",
+    "children": [
+      {
+        "id": "563f9219ee94c4e3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0c17523f1a62a483",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "a48155d6a46b17f9",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "ccc45dbcf1368c86",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "269d998130494f39",
+    "type": "split",
+    "children": [
+      {
+        "id": "70f870362f8ced04",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "1fa4d9bbb09e85fb",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "persona.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "persona 的反向链接列表"
+            }
+          },
+          {
+            "id": "a936572ac52de151",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "persona.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "persona 的出链列表"
+            }
+          },
+          {
+            "id": "60fd5ace409e860b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "01a0344d3d457da1",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "1ae1c468f1b47780",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "persona.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "persona 的大纲"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "command-palette:打开命令面板": false,
+      "markdown-importer:打开 Markdown 格式转换器": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "8cc7028ae56d35d6",
+  "lastOpenFiles": [
+    "persona.md",
+    "_chat/2026-04-06_Chat.md",
+    "deep/2026-04-06_paper_001.md",
+    "memory/memory-index.md",
+    "memory/元认知记忆/TrainingFree.md",
+    "memory/元认知记忆/_local_index.md",
+    "memory/条件性记忆/FeatureStability.md",
+    "memory/条件性记忆/PointCloud.md",
+    "memory/元认知记忆/TrainingFree.md.tmp.1652.1775487279906",
+    "memory/条件性记忆/DiffusionAcceleration.md",
+    "memory/条件性记忆/DiffusionAcceleration.md.tmp.1652.1775487270408",
+    "memory/条件性记忆/_local_index.md",
+    "memory/事实性记忆/VoxelRepresentation.md",
+    "memory/事实性记忆/TestTimeAdaptation.md",
+    "memory/事实性记忆/DiffusionAcceleration.md",
+    "memory/程序性记忆/DiffusionAcceleration.md",
+    "memory/程序性记忆/MultimodalFusion.md",
+    "memory/程序性记忆/DiffusionAcceleration.md.tmp.1652.1775487263731",
+    "deep/2026-04-06_paper_002.md",
+    "_new/2026-04-06_paper_002.md",
+    "_template/book_template.md",
+    "memory/条件性记忆/TestTimeAdaptation.md",
+    "memory/事实性记忆/_local_index.md",
+    "memory/事实性记忆/BayesianInference.md",
+    "memory/条件性记忆/PointCloud.md.tmp.1652.1775487066267",
+    "memory/条件性记忆/TestTimeAdaptation.md.tmp.1652.1775487061995",
+    "memory/程序性记忆/MultimodalFusion.md.tmp.1652.1775487057940",
+    "memory/程序性记忆/_local_index.md",
+    "memory/元认知记忆",
+    "memory/条件性记忆",
+    "memory/程序性记忆",
+    "memory/事实性记忆",
+    "_new/2026-04-06_paper_001.md",
+    "_images/2026-04-06_paper_002/2026-04-06_paper_002_32.png",
+    "_images/2026-04-06_paper_002/2026-04-06_paper_002_24.png",
+    "_images/2026-04-06_paper_002/2026-04-06_paper_002_14.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_32.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_31.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_30.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_29.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_28.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_27.png",
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_26.png"
+  ]
+}

@@ -43,6 +43,12 @@
  生成 persona.md       写入 _new/               写入 memory/ & deep/          写入 _chat/
 ```
 
+<div align="center">
+
+<img src="./assets/chat-demo.png" alt="茵蒂克丝 Chat" width="75%"/>
+
+</div>
+
 ---
 
 ## 🚀 Quick Start

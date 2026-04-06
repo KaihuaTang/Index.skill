@@ -5,14 +5,8 @@ __pycache__/
 # Mac
 .DS_Store
 
-# Vault
-IndexVault
-
 # Downloads
 IndexVault/_downloads/
-
-# Obsidian internal
-IndexVault/.obsidian/workspace.json
 
 # WebUI debug log
 webUI/debug.log
