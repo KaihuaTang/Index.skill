@@ -13,7 +13,7 @@ Four complementary skills in `skills/`:
 - **index-init** (`/index-init`): First-run setup. Creates the Obsidian vault directory structure, copies templates from `skills/index-init/resources/` to the vault, and generates `persona.md` via interactive MBTI questionnaire.
 - **index-note** (`/index-note INPUT`): Core skill. Classifies input → downloads content if needed → extracts images → fills type-specific template → writes note to `_new/`.
 - **index-chat** (`/index-chat INPUT`): Chat skill. Loads persona from `persona.md` → extracts keywords from user input → retrieves relevant knowledge from `memory/` via layered navigation → responds in persona style with references → saves conversation to `_chat/`.
-- **index-update** (`/index-update`): Knowledge organizer. Scans `_new/` for notes marked "已读" → extracts knowledge items → classifies into 4-type hierarchical memory system (`memory/`) → archives note to `deep/`. Also processes `_chat/` logs: applies persona updates to `persona.md`, extracts user-provided knowledge, and archives chat files to `deep/`.
+- **index-update** (`/index-update`): Knowledge organizer. Scans `_new/` for notes marked "已读" → extracts knowledge items → classifies into 4-type hierarchical memory system (`memory/`) → archives note to `deep/`. Also processes `_chat/` logs: applies persona updates to `persona.md`, extracts user-provided knowledge, and archives chat files to `deep/`. The read marker is a literal checkbox at the bottom of every note: `- [x] <big><big>已读</big></big>` triggers archiving; `- [ ] <big><big>已读</big></big>` is skipped.
 
 Each skill is defined by a `SKILL.md` file with frontmatter:
 ```yaml
@@ -62,6 +62,11 @@ memory/
 ```
 
 KEY_WORD files use PascalCase English (e.g., `LLM.md`, `Transformer.md`). Each contains multiple knowledge entries with summaries and wikilinks back to source notes in `deep/`.
+
+**Invariants when working with memory:**
+- **Layered access only**: Always navigate `memory-index.md` → `_local_index.md` → `KEY_WORD.md`. Never glob/read all `KEY_WORD.md` files at once.
+- **Concept-level keywords**: Keywords must be reusable across notes (`LLM`, `Diffusion`, `ReinforcementLearning`), not note-specific titles (`AttentionIsAllYouNeed`, `GPT4TechnicalReport`). A keyword is expected to accumulate multiple entries over time.
+- **Archive before memory write** (index-update): Move the note to `deep/` *first*, then write memory entries. This way every `来源` wikilink points to the actual archived location (and uses the post-collision filename if a suffix was added).
 
 ## Running Python Scripts
 

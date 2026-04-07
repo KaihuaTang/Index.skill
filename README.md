@@ -66,6 +66,10 @@
 | **[uv](https://docs.astral.sh/uv/)** | Python 包管理器（用于辅助脚本） | `uv --version` |
 | **[Obsidian](https://obsidian.md/)** | 可选，用于阅览生成的笔记 | -- |
 
+```
+使用方式：直接在本项目目录下运行Claude Code，或者将本项目路径下的skills合并到你使用的Claude Code工作目录下的".claude"文件夹下。
+```
+
 ### 1️⃣ 初始化
 
 ```bash
