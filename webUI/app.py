@@ -1008,6 +1008,79 @@ def api_persona_save():
     return jsonify({"success": True})
 
 
+@app.route("/api/chat-logs")
+def api_chat_logs():
+    """List chat log files from _chat/ (new) and deep/ (archived)."""
+    logs = []
+
+    # New chat logs in _chat/
+    if CHAT_DIR.exists():
+        for fp in sorted(CHAT_DIR.glob("*.md"), reverse=True):
+            metadata, body = parse_note(fp)
+            date_str = metadata.get("date", fp.stem[:10] if len(fp.stem) >= 10 else "")
+            # Extract first line of chat as preview
+            preview = ""
+            for line in body.split("\n"):
+                line = line.strip()
+                if line and not line.startswith("#") and not line.startswith("---") and not line.startswith("**🕐"):
+                    preview = line[:100] + ("..." if len(line) > 100 else "")
+                    break
+            logs.append({
+                "filename": fp.name,
+                "date": date_str,
+                "source": "chat",
+                "preview": preview,
+            })
+
+    # Archived chat logs in deep/ (files with _Chat in name or type: chat)
+    if DEEP_DIR.exists():
+        for fp in sorted(DEEP_DIR.glob("*Chat*.md"), reverse=True):
+            metadata, body = parse_note(fp)
+            date_str = metadata.get("date", fp.stem[:10] if len(fp.stem) >= 10 else "")
+            preview = ""
+            for line in body.split("\n"):
+                line = line.strip()
+                if line and not line.startswith("#") and not line.startswith("---") and not line.startswith("**🕐"):
+                    preview = line[:100] + ("..." if len(line) > 100 else "")
+                    break
+            logs.append({
+                "filename": fp.name,
+                "date": date_str,
+                "source": "archived",
+                "preview": preview,
+            })
+
+    return jsonify(logs)
+
+
+@app.route("/api/chat-log/<source>/<filename>")
+def api_chat_log_detail(source, filename):
+    """Return content of a specific chat log file."""
+    if source == "chat":
+        filepath = CHAT_DIR / filename
+    elif source == "archived":
+        filepath = DEEP_DIR / filename
+    else:
+        return jsonify({"error": "Invalid source"}), 400
+
+    if not filepath.exists() or not filepath.name.endswith(".md"):
+        return jsonify({"error": "Not found"}), 404
+
+    # Security: ensure path doesn't escape
+    try:
+        filepath.resolve().relative_to(VAULT_PATH.resolve())
+    except ValueError:
+        return jsonify({"error": "Invalid path"}), 400
+
+    metadata, body = parse_note(filepath)
+    return jsonify({
+        "filename": filename,
+        "source": source,
+        "metadata": metadata,
+        "content": body,
+    })
+
+
 @app.route("/api/stats")
 def api_stats():
     """Return counts for sidebar badges."""
@@ -1025,7 +1098,11 @@ def api_stats():
     if DEEP_DIR.exists():
         archived_count = sum(1 for _ in DEEP_DIR.glob("*.md"))
 
-    return jsonify({"new": new_count, "read": read_count, "archived": archived_count})
+    chat_count = 0
+    if CHAT_DIR.exists():
+        chat_count = sum(1 for _ in CHAT_DIR.glob("*.md"))
+
+    return jsonify({"new": new_count, "read": read_count, "archived": archived_count, "chat_logs": chat_count})
 
 
 # ── Main ─────────────────────────────────────────────────────────────────

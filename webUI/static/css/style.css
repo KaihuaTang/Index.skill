@@ -990,6 +990,175 @@ body {
 .chat-send-btn:hover { background: var(--accent-hover); }
 .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* ── Chat View Tabs ─────────────────────────────────────────────────── */
+
+.chat-view-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.chat-view-tab {
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chat-view-tab:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.chat-view-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* ── Chat History ───────────────────────────────────────────────────── */
+
+.chat-history-panel {
+    max-width: 760px;
+}
+
+.chat-history-filter {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.chat-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.chat-log-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chat-log-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.chat-log-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.chat-log-date {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.chat-log-source {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+}
+
+.chat-log-source.source-new {
+    background: #eef2ff;
+    color: var(--accent);
+}
+
+.chat-log-source.source-archived {
+    background: #f3f4f6;
+    color: var(--text-secondary);
+}
+
+.chat-log-filename {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+}
+
+.chat-log-preview {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Chat log detail */
+
+.chat-log-detail {
+    max-width: 760px;
+}
+
+.chat-log-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.btn-back {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.3rem 0.7rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.chat-log-detail-title {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.chat-log-detail-badge {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 500;
+}
+
+.chat-log-detail-badge.source-new {
+    background: #eef2ff;
+    color: var(--accent);
+}
+
+.chat-log-detail-badge.source-archived {
+    background: #f3f4f6;
+    color: var(--text-secondary);
+}
+
+.chat-log-detail-body {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    line-height: 1.7;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+}
+
 /* ── Update Panel ────────────────────────────────────────────────────── */
 
 .update-panel {

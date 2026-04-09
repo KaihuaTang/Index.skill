@@ -180,9 +180,11 @@ async function loadStats() {
         const badgeNew = document.getElementById('badge-new');
         const badgeRead = document.getElementById('badge-read');
         const badgeArchived = document.getElementById('badge-archived');
+        const badgeChat = document.getElementById('badge-chat');
         if (badgeNew) badgeNew.textContent = data.new || '';
         if (badgeRead) badgeRead.textContent = data.read || '';
         if (badgeArchived) badgeArchived.textContent = data.archived || '';
+        if (badgeChat) badgeChat.textContent = data.chat_logs || '';
     } catch (e) { /* ignore */ }
 }
 
@@ -669,6 +671,127 @@ function addAssistantBubble(text) {
         </div>
     `;
     messages.scrollTop = messages.scrollHeight;
+}
+
+/* ── Chat History ───────────────────────────────────────────────────── */
+
+let chatLogsCache = null;
+let chatLogFilter = 'all';
+
+function switchChatTab(tab) {
+    document.querySelectorAll('.chat-view-tab').forEach(el => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+    });
+
+    const convPanel = document.getElementById('chat-panel-conversation');
+    const histPanel = document.getElementById('chat-panel-history');
+
+    if (tab === 'conversation') {
+        convPanel.classList.remove('d-none');
+        histPanel.classList.add('d-none');
+    } else {
+        convPanel.classList.add('d-none');
+        histPanel.classList.remove('d-none');
+        closeChatLogDetail();
+        loadChatLogs();
+    }
+}
+
+async function loadChatLogs() {
+    const list = document.getElementById('chat-history-list');
+    const empty = document.getElementById('empty-chat-history');
+    list.innerHTML = '<div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+    if (empty) empty.classList.add('d-none');
+
+    try {
+        const resp = await fetch('/api/chat-logs');
+        chatLogsCache = await resp.json();
+        renderChatLogs(chatLogsCache);
+    } catch (e) {
+        list.innerHTML = '<div class="loading-state" style="color:#dc2626">加载失败</div>';
+    }
+}
+
+function filterChatLogs(filter) {
+    chatLogFilter = filter;
+    const bar = document.querySelector('.chat-history-filter');
+    if (bar) {
+        bar.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
+    }
+    if (chatLogsCache) {
+        renderChatLogs(chatLogsCache);
+    }
+}
+
+function renderChatLogs(logs) {
+    const list = document.getElementById('chat-history-list');
+    const empty = document.getElementById('empty-chat-history');
+
+    const filtered = chatLogFilter === 'all' ? logs : logs.filter(l => l.source === chatLogFilter);
+
+    if (filtered.length === 0) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('d-none');
+        return;
+    }
+    if (empty) empty.classList.add('d-none');
+
+    list.innerHTML = filtered.map(log => {
+        const sourceLabel = log.source === 'chat' ? '最新' : '已归档';
+        const sourceClass = log.source === 'chat' ? 'source-new' : 'source-archived';
+        return `
+            <div class="chat-log-card" onclick="openChatLog('${log.source}', '${escapeHtml(log.filename)}')">
+                <div class="chat-log-card-header">
+                    <span class="chat-log-date"><i class="bi bi-calendar3 me-1"></i>${escapeHtml(log.date)}</span>
+                    <span class="chat-log-source ${sourceClass}">${sourceLabel}</span>
+                </div>
+                <div class="chat-log-filename">${escapeHtml(log.filename.replace('.md', ''))}</div>
+                ${log.preview ? `<div class="chat-log-preview">${escapeHtml(log.preview)}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+async function openChatLog(source, filename) {
+    const detail = document.getElementById('chat-log-detail');
+    const list = document.getElementById('chat-history-list');
+    const filterBar = document.querySelector('.chat-history-filter');
+    const empty = document.getElementById('empty-chat-history');
+    const titleEl = document.getElementById('chat-log-detail-title');
+    const badgeEl = document.getElementById('chat-log-detail-badge');
+    const bodyEl = document.getElementById('chat-log-detail-body');
+
+    // Show detail, hide list
+    list.classList.add('d-none');
+    if (filterBar) filterBar.classList.add('d-none');
+    if (empty) empty.classList.add('d-none');
+    detail.classList.remove('d-none');
+
+    titleEl.textContent = filename.replace('.md', '');
+    badgeEl.textContent = source === 'chat' ? '最新' : '已归档';
+    badgeEl.className = `chat-log-detail-badge ${source === 'chat' ? 'source-new' : 'source-archived'}`;
+    bodyEl.innerHTML = '<div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+
+    try {
+        const resp = await fetch(`/api/chat-log/${source}/${encodeURIComponent(filename)}`);
+        if (!resp.ok) throw new Error('Not found');
+        const data = await resp.json();
+        bodyEl.innerHTML = renderObsidianMarkdown(data.content);
+    } catch (e) {
+        bodyEl.innerHTML = '<div class="loading-state" style="color:#dc2626">加载失败</div>';
+    }
+}
+
+function closeChatLogDetail() {
+    const detail = document.getElementById('chat-log-detail');
+    const list = document.getElementById('chat-history-list');
+    const filterBar = document.querySelector('.chat-history-filter');
+
+    if (detail) detail.classList.add('d-none');
+    if (list) list.classList.remove('d-none');
+    if (filterBar) filterBar.classList.remove('d-none');
 }
 
 /* ── Update / Archive ────────────────────────────────────────────────── */

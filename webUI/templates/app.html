@@ -39,6 +39,7 @@
                 <a class="nav-item" data-view="chat" onclick="switchView('chat')">
                     <i class="bi bi-chat-dots"></i>
                     <span>聊天</span>
+                    <span class="nav-badge" id="badge-chat"></span>
                 </a>
                 <a class="nav-item" data-view="update" onclick="switchView('update')">
                     <i class="bi bi-arrow-repeat"></i>
@@ -190,8 +191,18 @@
             <div class="view-header">
                 <h3><i class="bi bi-chat-dots me-2"></i>聊天</h3>
                 <p class="view-desc">基于人格与记忆库的智能对话</p>
+                <div class="chat-view-tabs">
+                    <button class="chat-view-tab active" data-tab="conversation" onclick="switchChatTab('conversation')">
+                        <i class="bi bi-chat-heart me-1"></i>对话
+                    </button>
+                    <button class="chat-view-tab" data-tab="history" onclick="switchChatTab('history')">
+                        <i class="bi bi-clock-history me-1"></i>聊天记录
+                    </button>
+                </div>
             </div>
-            <div class="chat-container">
+
+            <!-- Chat conversation panel -->
+            <div class="chat-container" id="chat-panel-conversation">
                 <div class="chat-messages" id="chat-messages">
                     <div class="chat-welcome">
                         <i class="bi bi-chat-heart"></i>
@@ -206,6 +217,38 @@
                             <i class="bi bi-send-fill"></i>
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Chat history panel -->
+            <div class="chat-history-panel d-none" id="chat-panel-history">
+                <div class="chat-history-filter">
+                    <button class="filter-btn active" data-filter="all" onclick="filterChatLogs('all')">全部</button>
+                    <button class="filter-btn" data-filter="chat" onclick="filterChatLogs('chat')">
+                        <span class="filter-dot" style="background:#2563eb"></span>最新
+                    </button>
+                    <button class="filter-btn" data-filter="archived" onclick="filterChatLogs('archived')">
+                        <span class="filter-dot" style="background:#6b7280"></span>已归档
+                    </button>
+                </div>
+                <div class="chat-history-list" id="chat-history-list">
+                    <div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+                </div>
+                <div class="empty-state d-none" id="empty-chat-history">
+                    <i class="bi bi-chat-square-text"></i>
+                    <p>暂无聊天记录</p>
+                </div>
+
+                <!-- Chat log detail overlay -->
+                <div class="chat-log-detail d-none" id="chat-log-detail">
+                    <div class="chat-log-detail-header">
+                        <button class="btn-back" onclick="closeChatLogDetail()">
+                            <i class="bi bi-arrow-left me-1"></i>返回
+                        </button>
+                        <span class="chat-log-detail-title" id="chat-log-detail-title"></span>
+                        <span class="chat-log-detail-badge" id="chat-log-detail-badge"></span>
+                    </div>
+                    <div class="chat-log-detail-body obsidian-content" id="chat-log-detail-body"></div>
                 </div>
             </div>
         </div>
