@@ -136,9 +136,48 @@ No download needed. Read from original path.
 ### Book / Web Info / Web News (web URL):
 Use WebFetch tool to retrieve and analyze web content. The WebFetch tool returns processed content directly -- no file download needed for text content.
 
+## Step 2.5: Extract PDF Content
+
+When the source material is a PDF file, call the `extract-pdf` skill to get structured Markdown (with tables, headings, lists preserved) and rendered page images. This provides much better content than reading the raw PDF directly.
+
+**Applies to:**
+- Paper type (arXiv PDF at `./IndexVault/_downloads/arxiv/${ARXIV_ID}.pdf`, or local PDF path)
+- Book type (when the source is a local PDF file)
+
+**Skip for:** idea, project, webinfo, webnews, and non-PDF book sources (.docx, .txt, .epub).
+
+**Run the extractor:**
+
+```bash
+# Derive a slug from the PDF filename (e.g., "2401.12345" or "thinking_fast_and_slow")
+PDF_SLUG=$(basename "${PDF_PATH}" .pdf)
+
+uv run --with pymupdf4llm --with pdfminer.six python ./skills/extract-pdf/scripts/extract_pdf.py \
+  --input "${PDF_PATH}" \
+  --output-dir ./IndexVault/_downloads/_pdf_extracts/${PDF_SLUG}/
+```
+
+**Read the manifest to understand the PDF structure:**
+
+```
+Read ./IndexVault/_downloads/_pdf_extracts/${PDF_SLUG}/manifest.json
+```
+
+Check `total_pages_in_pdf`, `tables_detected`, and per-page `text_chars`. Pages with very low `text_chars` are likely scanned/image-only — read the page image directly for those.
+
+**Extracted content is available at:**
+- `full_text.md` — structured Markdown with tables and headings (primary reading source)
+- `full_text_pdfminer.md` — plain-text complement for cross-checking mangled passages
+- `pages/page_NNN.md` — per-page Markdown (aligned with images by page number)
+- `images/page_NNN.png` — rendered page images (for figures, math, scanned pages, complex tables)
+
+Use this extracted content in Step 3 for analysis instead of reading the raw PDF.
+
 ## Step 3: Read and Analyze Content
 
 Read the source material thoroughly. The analysis depth and strategy depends on the type.
+
+**For PDF sources (paper/book):** Read from the `extract-pdf` output generated in Step 2.5. Start with `full_text.md` for the main content. For pages containing figures, math, or complex tables, read the corresponding `images/page_NNN.png` directly — Claude can see and interpret the rendered page. Cross-check with `full_text_pdfminer.md` if any passage looks garbled or has suspicious gaps.
 
 **Cross-cutting principles (apply to ALL types):**
 
@@ -201,6 +240,8 @@ Based on cognitive science research, every note should:
 ## Step 3.5: Extract Images to Temp Directory
 
 After analyzing content, extract images from the source material into a **temporary directory**. Only images actually embedded in the final note will be kept (see Step 4f).
+
+**Note:** For PDF sources, Step 2.5 already produced rendered page images at `./IndexVault/_downloads/_pdf_extracts/${PDF_SLUG}/images/page_NNN.png`. Those are full-page renders useful for *reading* content. This step extracts *individual figures* (diagrams, charts, result plots) for *embedding* in the final note — they serve different purposes. For arXiv papers, `extract_images.py` also attempts to download high-resolution figures from the LaTeX source, which are higher quality than anything extracted from the compiled PDF.
 
 **IMPORTANT**: Run the image extraction script using `uv run --with pymupdf` to ensure PyMuPDF is available.
 
