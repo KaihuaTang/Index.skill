@@ -366,6 +366,7 @@ body {
 }
 
 .sidebar-brand i { font-size: 1.2rem; color: var(--accent); }
+.sidebar-logo { width: 1.4rem; height: 1.4rem; object-fit: contain; }
 
 .sidebar-nav {
     flex: 1;
