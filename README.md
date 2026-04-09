@@ -201,9 +201,9 @@
 
 ---
 
-## 🌐 Web UI (开发中)
+## 🌐 Web UI
 
-茵蒂克丝.skill 提供基于浏览器的 Web 界面，无需 Obsidian 即可完成初始化、笔记浏览和信息录入。
+茵蒂克丝.skill 提供基于浏览器的 Web 界面，无需 Obsidian 即可完成全部工作流：初始化、笔记浏览、信息录入、归档整理和聊天交流。
 
 ### ⚡ 启动
 
@@ -211,18 +211,31 @@
 uv run --with flask --with python-frontmatter python webUI/app.py
 ```
 
-服务启动后访问 `http://localhost:5000`。
+服务启动后访问 `http://localhost:5001`（可通过 `PORT` 环境变量覆盖）。
 
-### 🖥️ 三个界面
+### 🖥️ 界面总览
 
-| 界面 | 路径 | 说明 |
+Web UI 采用侧边栏导航，包含以下六个视图：
+
+| 视图 | 说明 |
+|------|------|
+| **新加入** | `_new/` 中尚未阅读的笔记，支持按类型筛选 |
+| **已读** | `_new/` 中已标记"已读"但尚未归档的笔记 |
+| **已归档** | `deep/` 中已提取知识并归档的笔记 |
+| **新建笔记** | 文本 / 文件上传 / URL 三种输入方式，实时显示处理进度 |
+| **聊天** | 基于 persona.md 人格与 memory/ 知识库的智能对话 |
+| **归档整理** | 一键触发 `/index-update`，扫描已读笔记和聊天记录进行归档 |
+
+另有两个独立页面：
+
+| 页面 | 路径 | 说明 |
 |------|------|------|
-| **初始化向导** | `/init` | 首次使用时自动进入，设置职业和 Agent MBTI 人格 |
-| **笔记库** | `/vault` | 浏览所有已生成的笔记，支持按类型筛选 |
-| **信息录入** | `/vault` → 新建笔记 | 文本 / 文件上传 / URL 三种输入方式 |
+| **初始化向导** | `/init` | 首次使用时自动进入，6 步设置职业和 Agent MBTI 人格 |
+| **笔记详情** | `/note/<source>/<filename>` | 单篇笔记查看，支持标记已读/取消已读 |
 
 > - 未初始化时访问首页自动跳转到初始化向导
-> - 笔记详情页支持 Obsidian 特有格式渲染：Callout 块、Wikilink、数学公式、图片嵌入
+> - 笔记详情页支持 Obsidian 特有格式渲染：Callout 块、Wikilink、KaTeX 数学公式、图片嵌入
+> - 笔记分类逻辑：笔记末尾的 `- [ ] 已读` 复选框未勾选为"新加入"，勾选后变为"已读"，运行归档整理后移至"已归档"
 
 ---
 
@@ -247,9 +260,15 @@ uv run --with flask --with python-frontmatter python webUI/app.py
 │       ├── SKILL.md
 │       └── resources/           # 记忆索引模板
 ├── webUI/                       # 🌐 Web 界面
-│   ├── app.py
+│   ├── app.py                   # Flask 后端（路由、MBTI、后台任务）
 │   ├── static/
+│   │   ├── css/style.css        # 自定义样式（侧边栏、卡片、聊天、Obsidian 渲染）
+│   │   └── js/main.js           # SPA 导航、Markdown 渲染、聊天、轮询
 │   └── templates/
+│       ├── base.html            # 共享布局（CDN 依赖）
+│       ├── init.html            # 初始化向导（6 步 MBTI）
+│       ├── app.html             # 主界面（侧边栏 + 6 个视图）
+│       └── note_detail.html     # 笔记详情页
 ├── IndexVault/                  # 📦 Obsidian 知识库
 │   ├── _new/                    # 生成的笔记
 │   ├── deep/                    # 已归档笔记与聊天记录

@@ -1,172 +1,220 @@
 {% extends "base.html" %}
 {% block title %}茵蒂克丝.skill - 初始化{% endblock %}
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-7">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h3 class="text-center mb-4"><i class="bi bi-gear-wide-connected me-2"></i>茵蒂克丝.skill 初始化设置</h3>
+{% block body %}
+<div class="init-page">
+    <div class="init-container">
+        <div class="init-header">
+            <div class="init-logo">
+                <i class="bi bi-journal-bookmark-fill"></i>
+            </div>
+            <h2>茵蒂克丝.skill</h2>
+            <p class="text-muted">配置你的知识管理引擎</p>
+        </div>
 
-                <!-- Step indicator -->
-                <div class="step-indicator mb-4">
-                    <div class="step-dots">
-                        <span class="step-dot active" data-step="1">1</span>
-                        <span class="step-dot" data-step="2">2</span>
-                        <span class="step-dot" data-step="3">3</span>
-                        <span class="step-dot" data-step="4">4</span>
-                        <span class="step-dot" data-step="5">5</span>
-                        <span class="step-dot" data-step="6">6</span>
-                    </div>
-                    <div class="step-labels">
-                        <small>职业</small>
-                        <small>E/I</small>
-                        <small>S/N</small>
-                        <small>T/F</small>
-                        <small>J/P</small>
-                        <small>确认</small>
-                    </div>
-                </div>
+        <!-- Progress bar -->
+        <div class="init-progress">
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-fill" style="width: 16.67%"></div>
+            </div>
+            <div class="progress-steps">
+                <span class="progress-step active" data-step="1">
+                    <span class="step-num">1</span>
+                    <span class="step-text">职业</span>
+                </span>
+                <span class="progress-step" data-step="2">
+                    <span class="step-num">2</span>
+                    <span class="step-text">E/I</span>
+                </span>
+                <span class="progress-step" data-step="3">
+                    <span class="step-num">3</span>
+                    <span class="step-text">S/N</span>
+                </span>
+                <span class="progress-step" data-step="4">
+                    <span class="step-num">4</span>
+                    <span class="step-text">T/F</span>
+                </span>
+                <span class="progress-step" data-step="5">
+                    <span class="step-num">5</span>
+                    <span class="step-text">J/P</span>
+                </span>
+                <span class="progress-step" data-step="6">
+                    <span class="step-num">6</span>
+                    <span class="step-text">确认</span>
+                </span>
+            </div>
+        </div>
 
-                <!-- Step 1: Profession -->
-                <div class="wizard-step" id="step-1">
-                    <h5>请问您从事的工作与专业领域是什么？</h5>
-                    <p class="text-muted small">例如：AI研究员、软件工程师、产品经理、学生-计算机科学等</p>
-                    <input type="text" class="form-control form-control-lg" id="profession" placeholder="请输入您的职业...">
-                    <div class="d-flex justify-content-end mt-4">
-                        <button class="btn btn-primary" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
-                    </div>
-                </div>
+        <!-- Step 1: Profession -->
+        <div class="wizard-step" id="step-1">
+            <h4>请问您从事的工作与专业领域是什么？</h4>
+            <p class="hint">例如：AI研究员、软件工程师、产品经理、学生-计算机科学等</p>
+            <input type="text" class="form-input" id="profession" placeholder="请输入您的职业..." autofocus>
+            <div class="step-actions single">
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
 
-                <!-- MBTI Intro (shown before step 2) -->
-                <div class="wizard-step d-none" id="step-2">
-                    <div class="alert alert-info mb-3">
-                        <small>接下来我将通过 MBTI 四个维度来配置 <strong>与您交互的 Agent 的人格特质</strong>。您的选择将决定 Agent 在与您对话时的风格——包括它的思维方式、表达习惯和分析偏好。请根据您希望 Agent 以什么样的方式与您互动来选择，而非您自己的性格。</small>
+        <!-- Step 2: E/I -->
+        <div class="wizard-step d-none" id="step-2">
+            <div class="mbti-intro">
+                <i class="bi bi-info-circle"></i>
+                接下来通过 MBTI 四个维度来配置 Agent 的人格特质。请根据您希望 Agent 以什么方式与您互动来选择。
+            </div>
+            <h4>第1维度：Agent 的能量方向</h4>
+            <div class="mbti-options">
+                <label class="mbti-option">
+                    <input type="radio" name="E_I" value="E">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">E</div>
+                        <div class="mbti-info">
+                            <strong>外向 Extraversion</strong>
+                            <p>主动积极，先给建议再深入分析，风格开放外放，善于发散</p>
+                        </div>
                     </div>
-                    <h5>第1维度：Agent 的能量方向</h5>
-                    <div class="mbti-options">
-                        <label class="mbti-option">
-                            <input type="radio" name="E_I" value="E">
-                            <div class="mbti-card">
-                                <strong>E (外向 Extraversion)</strong>
-                                <p>Agent 表现得主动积极，倾向于先给出建议再深入分析，风格开放外放，善于发散</p>
-                            </div>
-                        </label>
-                        <label class="mbti-option">
-                            <input type="radio" name="E_I" value="I">
-                            <div class="mbti-card">
-                                <strong>I (内向 Introversion)</strong>
-                                <p>Agent 表现得沉稳内敛，倾向于先深度思考再给出回应，风格专注深入，善于聚焦</p>
-                            </div>
-                        </label>
+                </label>
+                <label class="mbti-option">
+                    <input type="radio" name="E_I" value="I">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">I</div>
+                        <div class="mbti-info">
+                            <strong>内向 Introversion</strong>
+                            <p>沉稳内敛，先深度思考再给出回应，风格专注深入，善于聚焦</p>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-outline-secondary" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
-                        <button class="btn btn-primary" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
-                    </div>
-                </div>
+                </label>
+            </div>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
 
-                <!-- Step 3: S/N -->
-                <div class="wizard-step d-none" id="step-3">
-                    <h5>第2维度：Agent 的信息获取方式</h5>
-                    <div class="mbti-options">
-                        <label class="mbti-option">
-                            <input type="radio" name="S_N" value="S">
-                            <div class="mbti-card">
-                                <strong>S (感觉 Sensing)</strong>
-                                <p>Agent 关注具体事实和细节，回答循序渐进，重视实证数据</p>
-                            </div>
-                        </label>
-                        <label class="mbti-option">
-                            <input type="radio" name="S_N" value="N">
-                            <div class="mbti-card">
-                                <strong>N (直觉 iNtuition)</strong>
-                                <p>Agent 关注整体模式和可能性，善于跳跃式联想，重视灵感洞察</p>
-                            </div>
-                        </label>
+        <!-- Step 3: S/N -->
+        <div class="wizard-step d-none" id="step-3">
+            <h4>第2维度：Agent 的信息获取方式</h4>
+            <div class="mbti-options">
+                <label class="mbti-option">
+                    <input type="radio" name="S_N" value="S">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">S</div>
+                        <div class="mbti-info">
+                            <strong>感觉 Sensing</strong>
+                            <p>关注具体事实和细节，回答循序渐进，重视实证数据</p>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-outline-secondary" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
-                        <button class="btn btn-primary" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+                </label>
+                <label class="mbti-option">
+                    <input type="radio" name="S_N" value="N">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">N</div>
+                        <div class="mbti-info">
+                            <strong>直觉 iNtuition</strong>
+                            <p>关注整体模式和可能性，善于跳跃式联想，重视灵感洞察</p>
+                        </div>
                     </div>
-                </div>
+                </label>
+            </div>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
 
-                <!-- Step 4: T/F -->
-                <div class="wizard-step d-none" id="step-4">
-                    <h5>第3维度：Agent 的决策方式</h5>
-                    <div class="mbti-options">
-                        <label class="mbti-option">
-                            <input type="radio" name="T_F" value="T">
-                            <div class="mbti-card">
-                                <strong>T (思考 Thinking)</strong>
-                                <p>Agent 基于逻辑和客观分析给出建议，风格理性直接，重视一致性</p>
-                            </div>
-                        </label>
-                        <label class="mbti-option">
-                            <input type="radio" name="T_F" value="F">
-                            <div class="mbti-card">
-                                <strong>F (情感 Feeling)</strong>
-                                <p>Agent 基于价值观和人际影响给出建议，风格温暖共情，重视和谐</p>
-                            </div>
-                        </label>
+        <!-- Step 4: T/F -->
+        <div class="wizard-step d-none" id="step-4">
+            <h4>第3维度：Agent 的决策方式</h4>
+            <div class="mbti-options">
+                <label class="mbti-option">
+                    <input type="radio" name="T_F" value="T">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">T</div>
+                        <div class="mbti-info">
+                            <strong>思考 Thinking</strong>
+                            <p>基于逻辑和客观分析给出建议，风格理性直接，重视一致性</p>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-outline-secondary" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
-                        <button class="btn btn-primary" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+                </label>
+                <label class="mbti-option">
+                    <input type="radio" name="T_F" value="F">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">F</div>
+                        <div class="mbti-info">
+                            <strong>情感 Feeling</strong>
+                            <p>基于价值观和人际影响给出建议，风格温暖共情，重视和谐</p>
+                        </div>
                     </div>
-                </div>
+                </label>
+            </div>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
 
-                <!-- Step 5: J/P -->
-                <div class="wizard-step d-none" id="step-5">
-                    <h5>第4维度：Agent 的工作风格</h5>
-                    <div class="mbti-options">
-                        <label class="mbti-option">
-                            <input type="radio" name="J_P" value="J">
-                            <div class="mbti-card">
-                                <strong>J (判断 Judging)</strong>
-                                <p>Agent 偏好给出结构化、有计划的回答，追求明确结论和行动步骤</p>
-                            </div>
-                        </label>
-                        <label class="mbti-option">
-                            <input type="radio" name="J_P" value="P">
-                            <div class="mbti-card">
-                                <strong>P (知觉 Perceiving)</strong>
-                                <p>Agent 偏好保持开放和灵活，呈现多种可能性，适应变化</p>
-                            </div>
-                        </label>
+        <!-- Step 5: J/P -->
+        <div class="wizard-step d-none" id="step-5">
+            <h4>第4维度：Agent 的工作风格</h4>
+            <div class="mbti-options">
+                <label class="mbti-option">
+                    <input type="radio" name="J_P" value="J">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">J</div>
+                        <div class="mbti-info">
+                            <strong>判断 Judging</strong>
+                            <p>偏好结构化、有计划的回答，追求明确结论和行动步骤</p>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-outline-secondary" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
-                        <button class="btn btn-primary" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+                </label>
+                <label class="mbti-option">
+                    <input type="radio" name="J_P" value="P">
+                    <div class="mbti-card">
+                        <div class="mbti-letter">P</div>
+                        <div class="mbti-info">
+                            <strong>知觉 Perceiving</strong>
+                            <p>偏好保持开放和灵活，呈现多种可能性，适应变化</p>
+                        </div>
                     </div>
-                </div>
+                </label>
+            </div>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
 
-                <!-- Step 6: Confirm -->
-                <div class="wizard-step d-none" id="step-6">
-                    <h5>确认您的设置</h5>
-                    <div class="confirm-summary p-3 bg-light rounded mb-3">
-                        <p><strong>职业：</strong><span id="confirm-profession"></span></p>
-                        <p><strong>MBTI 类型：</strong><span id="confirm-mbti"></span></p>
-                    </div>
-                    <div class="d-flex justify-content-between mt-4">
-                        <button class="btn btn-outline-secondary" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
-                        <button class="btn btn-success btn-lg" id="btn-init" onclick="initWizard.submit()">
-                            <i class="bi bi-check-circle me-2"></i>开始初始化
-                        </button>
-                    </div>
+        <!-- Step 6: Confirm -->
+        <div class="wizard-step d-none" id="step-6">
+            <h4>确认您的设置</h4>
+            <div class="confirm-card">
+                <div class="confirm-row">
+                    <span class="confirm-label">职业</span>
+                    <span class="confirm-value" id="confirm-profession"></span>
                 </div>
+                <div class="confirm-row">
+                    <span class="confirm-label">MBTI 类型</span>
+                    <span class="confirm-value confirm-mbti" id="confirm-mbti"></span>
+                </div>
+            </div>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-init" id="btn-init" onclick="initWizard.submit()">
+                    <i class="bi bi-rocket-takeoff me-2"></i>开始初始化
+                </button>
+            </div>
+        </div>
 
-                <!-- Result -->
-                <div class="wizard-step d-none" id="step-result">
-                    <div class="text-center py-4">
-                        <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                        <h4 class="mt-3">初始化成功！</h4>
-                        <p id="result-info" class="text-muted"></p>
-                        <a href="/vault" class="btn btn-primary mt-3">
-                            <i class="bi bi-journal-text me-2"></i>进入知识库
-                        </a>
-                    </div>
+        <!-- Result -->
+        <div class="wizard-step d-none" id="step-result">
+            <div class="init-success">
+                <div class="success-icon">
+                    <i class="bi bi-check-circle-fill"></i>
                 </div>
+                <h3>初始化成功！</h3>
+                <p id="result-info" class="text-muted"></p>
+                <a href="/app" class="btn-enter">
+                    <i class="bi bi-journal-text me-2"></i>进入知识库
+                </a>
             </div>
         </div>
     </div>

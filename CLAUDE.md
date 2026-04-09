@@ -139,19 +139,19 @@ Templates exist in two places — `skills/index-init/resources/` is the canonica
 
 ## Web UI
 
-Flask-based web interface in `webUI/`:
+Flask-based web interface in `webUI/` with sidebar navigation and six views:
 
 ```
 webUI/
-├── app.py                 # Flask app (routes, MBTI logic, background tasks)
+├── app.py                 # Flask app (routes, MBTI logic, background tasks, chat/update APIs)
 ├── static/
-│   ├── css/style.css      # Custom styles (type badges, callouts, cards)
-│   └── js/main.js         # Markdown renderer, wizard, polling logic
+│   ├── css/style.css      # Custom styles (sidebar, cards, chat bubbles, callouts, Obsidian rendering)
+│   └── js/main.js         # SPA navigation, Obsidian markdown renderer, chat, polling
 └── templates/
     ├── base.html          # Shared layout (Bootstrap 5, marked.js, KaTeX CDN)
     ├── init.html          # 6-step init wizard
-    ├── vault.html         # Vault view + Input panel (toggled)
-    └── note_detail.html   # Single note viewer
+    ├── app.html           # Main app (sidebar + 6 views: new/read/archived/input/chat/update)
+    └── note_detail.html   # Single note viewer with mark-read toggle
 ```
 
 ### Running the Web UI
@@ -163,14 +163,26 @@ uv run --with flask --with python-frontmatter python webUI/app.py
 
 ### Key Routes
 
-- `GET /` — Redirects to `/init` (no vault) or `/vault` (vault exists)
+- `GET /` — Redirects to `/init` (no persona) or `/app` (vault exists)
 - `GET /init` — Init wizard (MBTI persona generation, deterministic Python)
-- `GET /vault` — Note list + input form (toggle via nav buttons)
-- `GET /note/<filename>` — Single note detail with Obsidian markdown rendering
+- `GET /app` — Main interface with sidebar (6 views: new/read/archived/input/chat/update)
+- `GET /note/<source>/<filename>` — Note detail (source = `new` or `archived`)
 - `POST /api/init` — Execute vault initialization
-- `GET /api/notes` — List notes as JSON
-- `POST /api/process` — Start note processing (spawns `claude -p "/index-note INPUT"` in background thread)
+- `GET /api/notes?status=new|read|archived` — List notes by status
+- `GET /api/note/<source>/<filename>` — Note detail as JSON
+- `POST /api/note/toggle-read` — Toggle the read marker in a note
+- `POST /api/process` — Start note processing (background pipeline via Claude CLI)
+- `POST /api/chat` — Send chat message (spawns `claude -p "/index-chat INPUT"`)
+- `POST /api/update` — Trigger archive (spawns `claude -p "/index-update"`)
 - `GET /api/task/<id>` — Poll background task status
+- `GET /api/stats` — Note counts per category (for sidebar badges)
+
+### Note Classification (Three States)
+
+Notes are classified into three categories based on location and read marker:
+- **新加入 (New)**: In `_new/`, read marker unchecked (`- [ ] <big><big>已读</big></big>`)
+- **已读 (Read)**: In `_new/`, read marker checked (`- [x] <big><big>已读</big></big>`)
+- **已归档 (Archived)**: In `deep/` (moved by `/index-update`)
 
 ### Obsidian Markdown Rendering
 

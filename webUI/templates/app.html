@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}茵蒂克丝.skill{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-journal-bookmark-fill"></i>
+            <span>茵蒂克丝.skill</span>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">笔记</div>
+                <a class="nav-item active" data-view="new" onclick="switchView('new')">
+                    <i class="bi bi-inbox"></i>
+                    <span>新加入</span>
+                    <span class="nav-badge" id="badge-new"></span>
+                </a>
+                <a class="nav-item" data-view="read" onclick="switchView('read')">
+                    <i class="bi bi-book"></i>
+                    <span>已读</span>
+                    <span class="nav-badge" id="badge-read"></span>
+                </a>
+                <a class="nav-item" data-view="archived" onclick="switchView('archived')">
+                    <i class="bi bi-archive"></i>
+                    <span>已归档</span>
+                    <span class="nav-badge" id="badge-archived"></span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">操作</div>
+                <a class="nav-item" data-view="input" onclick="switchView('input')">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>新建笔记</span>
+                </a>
+                <a class="nav-item" data-view="chat" onclick="switchView('chat')">
+                    <i class="bi bi-chat-dots"></i>
+                    <span>聊天</span>
+                </a>
+                <a class="nav-item" data-view="update" onclick="switchView('update')">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span>归档整理</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a class="nav-item" data-view="persona" onclick="switchView('persona')">
+                <i class="bi bi-person-badge"></i>
+                <span>AI 性格</span>
+            </a>
+            <a href="/init" class="nav-item">
+                <i class="bi bi-gear"></i>
+                <span>重新初始化</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile header -->
+    <div class="mobile-header">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i>
+        </button>
+        <span class="mobile-title">茵蒂克丝.skill</span>
+    </div>
+
+    <!-- Main content -->
+    <main class="main-content" id="main-content">
+
+        <!-- ===== View: New Notes ===== -->
+        <div class="view active" id="view-new">
+            <div class="view-header">
+                <h3><i class="bi bi-inbox me-2"></i>新加入</h3>
+                <p class="view-desc">尚未阅读的新笔记</p>
+                <div class="filter-bar" id="filter-bar-new"></div>
+            </div>
+            <div class="notes-grid" id="notes-new">
+                <div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+            </div>
+            <div class="empty-state d-none" id="empty-new">
+                <i class="bi bi-inbox"></i>
+                <p>暂无新笔记</p>
+                <button class="btn-action" onclick="switchView('input')">新建笔记</button>
+            </div>
+        </div>
+
+        <!-- ===== View: Read Notes ===== -->
+        <div class="view" id="view-read">
+            <div class="view-header">
+                <h3><i class="bi bi-book me-2"></i>已读</h3>
+                <p class="view-desc">已阅读但尚未归档的笔记，运行"归档整理"后将移至已归档</p>
+                <div class="filter-bar" id="filter-bar-read"></div>
+            </div>
+            <div class="notes-grid" id="notes-read">
+                <div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+            </div>
+            <div class="empty-state d-none" id="empty-read">
+                <i class="bi bi-book"></i>
+                <p>暂无已读笔记</p>
+            </div>
+        </div>
+
+        <!-- ===== View: Archived Notes ===== -->
+        <div class="view" id="view-archived">
+            <div class="view-header">
+                <h3><i class="bi bi-archive me-2"></i>已归档</h3>
+                <p class="view-desc">已提取知识并归档到深层记忆的笔记</p>
+                <div class="filter-bar" id="filter-bar-archived"></div>
+            </div>
+            <div class="notes-grid" id="notes-archived">
+                <div class="loading-state"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>
+            </div>
+            <div class="empty-state d-none" id="empty-archived">
+                <i class="bi bi-archive"></i>
+                <p>暂无归档笔记</p>
+            </div>
+        </div>
+
+        <!-- ===== View: New Note Input ===== -->
+        <div class="view" id="view-input">
+            <div class="view-header">
+                <h3><i class="bi bi-plus-circle me-2"></i>新建笔记</h3>
+                <p class="view-desc">输入任意内容，自动分类并生成结构化笔记</p>
+            </div>
+            <div class="input-panel">
+                <!-- Input type selector -->
+                <div class="input-type-tabs">
+                    <button class="input-tab active" data-type="text" onclick="setInputType('text')">
+                        <i class="bi bi-chat-text"></i> 文本
+                    </button>
+                    <button class="input-tab" data-type="file" onclick="setInputType('file')">
+                        <i class="bi bi-file-earmark-arrow-up"></i> 文件
+                    </button>
+                    <button class="input-tab" data-type="url" onclick="setInputType('url')">
+                        <i class="bi bi-link-45deg"></i> URL
+                    </button>
+                </div>
+
+                <!-- Text input -->
+                <div class="input-area" id="input-area-text">
+                    <textarea class="input-textarea" id="input-text" placeholder="输入您的想法、笔记内容、arXiv ID 等..."></textarea>
+                </div>
+
+                <!-- File input -->
+                <div class="input-area d-none" id="input-area-file">
+                    <div class="upload-zone" id="upload-zone">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <p>拖拽文件到此处，或点击选择</p>
+                        <small>支持 PDF, DOCX, TXT, EPUB 等</small>
+                        <input type="file" id="input-file" class="d-none" accept=".pdf,.docx,.doc,.txt,.epub,.mobi,.rtf">
+                    </div>
+                    <div id="file-info" class="file-info d-none">
+                        <i class="bi bi-file-earmark"></i>
+                        <span id="file-name"></span>
+                        <button class="btn-icon" onclick="clearFile()"><i class="bi bi-x-circle"></i></button>
+                    </div>
+                </div>
+
+                <!-- URL input -->
+                <div class="input-area d-none" id="input-area-url">
+                    <input type="url" class="input-url" id="input-url" placeholder="https://arxiv.org/abs/2505.00949">
+                    <small class="input-hint">支持 arXiv、GitHub、新闻网站及任意网页 URL</small>
+                </div>
+
+                <button class="btn-process" id="btn-process" onclick="startProcessing()">
+                    <i class="bi bi-magic me-2"></i>开始整理
+                </button>
+
+                <!-- Processing status -->
+                <div id="processing-status" class="processing-status d-none">
+                    <h5><i class="bi bi-list-check me-2"></i>处理进度</h5>
+                    <ul id="processing-steps" class="pipeline-steps"></ul>
+                    <div id="processing-result" class="d-none processing-result">
+                        <a id="processing-link" href="#" class="btn-action">
+                            <i class="bi bi-journal-check me-1"></i>查看新笔记
+                        </a>
+                    </div>
+                    <div id="processing-error-box" class="d-none processing-error">
+                        <i class="bi bi-exclamation-circle me-1"></i><span id="processing-error"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== View: Chat ===== -->
+        <div class="view" id="view-chat">
+            <div class="view-header">
+                <h3><i class="bi bi-chat-dots me-2"></i>聊天</h3>
+                <p class="view-desc">基于人格与记忆库的智能对话</p>
+            </div>
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-welcome">
+                        <i class="bi bi-chat-heart"></i>
+                        <p>你好！我是茵蒂克丝，你的知识管理助手。</p>
+                        <p class="small">可以问我任何关于你知识库中内容的问题。</p>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <textarea class="chat-input" id="chat-input" placeholder="输入你的问题..." rows="1"></textarea>
+                        <button class="chat-send-btn" id="chat-send-btn" onclick="sendChat()">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== View: Update/Archive ===== -->
+        <div class="view" id="view-update">
+            <div class="view-header">
+                <h3><i class="bi bi-arrow-repeat me-2"></i>归档整理</h3>
+                <p class="view-desc">扫描已读笔记和聊天记录，提取知识并归档</p>
+            </div>
+            <div class="update-panel">
+                <div class="update-info">
+                    <div class="update-info-card">
+                        <i class="bi bi-journal-check"></i>
+                        <div>
+                            <strong>已读笔记</strong>
+                            <p>将 _new/ 中标记"已读"的笔记提取知识后归档到 deep/，知识存入 memory/</p>
+                        </div>
+                    </div>
+                    <div class="update-info-card">
+                        <i class="bi bi-chat-left-text"></i>
+                        <div>
+                            <strong>聊天记录</strong>
+                            <p>将 _chat/ 中的对话归档到 deep/，检测人格更新并提取新知识</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="update-stats" id="update-stats">
+                    <span><strong id="update-read-count">0</strong> 篇已读笔记待归档</span>
+                </div>
+                <button class="btn-update" id="btn-update" onclick="startUpdate()">
+                    <i class="bi bi-arrow-repeat me-2"></i>开始归档整理
+                </button>
+                <div id="update-status" class="update-status d-none">
+                    <div class="update-progress">
+                        <div class="spinner-border spinner-border-sm me-2"></div>
+                        <span id="update-progress-text">正在处理...</span>
+                    </div>
+                </div>
+                <div id="update-result" class="update-result d-none">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span id="update-result-text"></span>
+                </div>
+                <div id="update-error" class="update-error d-none">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <span id="update-error-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== View: Persona ===== -->
+        <div class="view" id="view-persona">
+            <div class="view-header">
+                <div class="view-header-row">
+                    <div>
+                        <h3><i class="bi bi-person-badge me-2"></i>AI 性格</h3>
+                        <p class="view-desc">查看和编辑 persona.md — Agent 的人格配置</p>
+                    </div>
+                    <div class="persona-actions" id="persona-actions">
+                        <button class="btn-action persona-edit-btn" id="btn-persona-edit" onclick="togglePersonaEdit()">
+                            <i class="bi bi-pencil me-1"></i>编辑
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Read mode -->
+            <div id="persona-read" class="persona-read">
+                <div class="loading-state" id="persona-loading">
+                    <div class="spinner-border spinner-border-sm"></div> 加载中...
+                </div>
+                <div id="persona-content" class="obsidian-content d-none"></div>
+            </div>
+            <!-- Edit mode -->
+            <div id="persona-edit" class="persona-edit d-none">
+                <textarea class="persona-editor" id="persona-editor" spellcheck="false"></textarea>
+                <div class="persona-edit-actions">
+                    <button class="btn-prev" onclick="cancelPersonaEdit()">取消</button>
+                    <button class="btn-action" id="btn-persona-save" onclick="savePersona()">
+                        <i class="bi bi-check-lg me-1"></i>保存
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Sidebar overlay for mobile -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
+</script>
+{% endblock %}

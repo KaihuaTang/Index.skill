@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "_chat/2026-04-06_Chat.md",
+                "file": "persona.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2026-04-06_Chat"
+              "title": "persona"
             }
           }
         ]
@@ -44,7 +44,7 @@
                 "autoReveal": false
               },
               "icon": "lucide-folder-closed",
-              "title": "文件列表"
+              "title": "Files"
             }
           },
           {
@@ -174,18 +174,21 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "switcher:打开快速切换": false,
-      "graph:查看关系图谱": false,
-      "canvas:新建白板": false,
-      "command-palette:打开命令面板": false,
-      "markdown-importer:打开 Markdown 格式转换器": false,
-      "bases:新建数据库": false
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "command-palette:Open command palette": false,
+      "markdown-importer:Open format converter": false,
+      "bases:Create new base": false
     }
   },
   "active": "8cc7028ae56d35d6",
   "lastOpenFiles": [
-    "persona.md",
     "_chat/2026-04-06_Chat.md",
+    "_images/2026-04-09_paper_001/2026-04-09_paper_001_02.png",
+    "_images/2026-04-09_paper_001",
+    "_new/2026-04-09_paper_001.md",
+    "persona.md",
     "deep/2026-04-06_paper_001.md",
     "memory/memory-index.md",
     "memory/元认知记忆/TrainingFree.md",
@@ -215,7 +218,6 @@
     "memory/元认知记忆",
     "memory/条件性记忆",
     "memory/程序性记忆",
-    "memory/事实性记忆",
     "_new/2026-04-06_paper_001.md",
     "_images/2026-04-06_paper_002/2026-04-06_paper_002_32.png",
     "_images/2026-04-06_paper_002/2026-04-06_paper_002_24.png",
@@ -225,7 +227,6 @@
     "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_30.png",
     "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_29.png",
     "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_28.png",
-    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_27.png",
-    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_26.png"
+    "_images/_tmp_2026-04-06_paper_002/2026-04-06_paper_002_27.png"
   ]
 }

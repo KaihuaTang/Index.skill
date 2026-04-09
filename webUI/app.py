@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 茵蒂克丝.skill WebUI - Flask application for knowledge management.
-Provides three views: Init wizard, Vault visualization, and Note input.
+Five views: Init wizard, three note categories (new/read/archived),
+new note input, chat, and archive trigger.
 """
 
 import json
@@ -11,7 +12,7 @@ import shutil
 import subprocess
 import threading
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from flask import (
@@ -25,11 +26,6 @@ from flask import (
     url_for,
 )
 
-try:
-    import frontmatter
-except ImportError:
-    frontmatter = None
-
 # ── Paths ────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 VAULT_PATH = PROJECT_ROOT / "IndexVault"
@@ -39,6 +35,7 @@ MEMORY_DIR = VAULT_PATH / "memory"
 TEMPLATE_DIR = VAULT_PATH / "_template"
 IMAGES_DIR = VAULT_PATH / "_images"
 DOWNLOADS_DIR = VAULT_PATH / "_downloads"
+CHAT_DIR = VAULT_PATH / "_chat"
 RESOURCES_DIR = PROJECT_ROOT / "skills" / "index-init" / "resources"
 SCRIPTS_DIR = PROJECT_ROOT / "skills" / "index-note" / "scripts"
 
@@ -108,11 +105,7 @@ def generate_mbti_description(mbti_type):
     dial_2 = DIALOGUE_STYLES.get(j_p, "")
     think_key = s_n + t_f
     thinking = THINKING_APPROACHES.get(think_key, "")
-    return (
-        f"{traits}。"
-        f"对话风格{dial_1}，{dial_2}。"
-        f"{thinking}。"
-    )
+    return f"{traits}。对话风格{dial_1}，{dial_2}。{thinking}。"
 
 
 def derive_convergent_divergent(mbti):
@@ -132,18 +125,15 @@ def derive_system12(mbti):
         return "偏向System 1", "快速直觉判断，依赖经验模式匹配，行动力强"
     if e_i == "I" and s_n == "N" and j_p == "J":
         return "偏向System 2", "深度慢思考，依赖逻辑推演，追求严密论证"
-    # Mixed mode - count tendencies
     s1 = sum([e_i == "E", s_n == "S", j_p == "P"])
     s2 = sum([e_i == "I", s_n == "N", j_p == "J"])
-    dims_s1 = [d for d, v in [("E", e_i == "E"), ("S", s_n == "S"), ("P", j_p == "P")] if v]
-    dims_s2 = [d for d, v in [("I", e_i == "I"), ("N", s_n == "N"), ("J", j_p == "J")] if v]
     t_f = mbti[2]
     if s2 > s1:
-        s2_str = "".join(dims_s2)
         s1_note = f"，但{'外向特质(E)使其也能快速做出直觉判断' if e_i == 'E' else '感觉特质(S)提供经验直觉' if s_n == 'S' else '知觉特质(P)带来灵活应变'}"
-        return f"混合偏System 2", f"擅长深度逻辑推演({s_n}{t_f}){s1_note}"
+        return "混合偏System 2", f"擅长深度逻辑推演({s_n}{t_f}){s1_note}"
     if s1 > s2:
-        return f"混合偏System 1", f"倾向快速直觉判断({''.join(dims_s1)})，但也具备深度分析能力"
+        dims_s1 = [d for d, v in [("E", e_i == "E"), ("S", s_n == "S"), ("P", j_p == "P")] if v]
+        return "混合偏System 1", f"倾向快速直觉判断({''.join(dims_s1)})，但也具备深度分析能力"
     return "混合模式", "根据任务类型灵活切换快速直觉与深度分析"
 
 
@@ -226,7 +216,6 @@ def parse_note(filepath):
     metadata = {}
     body = text
 
-    # Parse YAML frontmatter
     if text.startswith("---"):
         parts = text.split("---", 2)
         if len(parts) >= 3:
@@ -274,7 +263,40 @@ def extract_title_from_body(body):
     return ""
 
 
-# ── Background Processing ───────────────────────────────────────────────
+def note_is_read(filepath):
+    """Check if a note has the read marker checked."""
+    try:
+        text = filepath.read_text(encoding="utf-8")
+        return bool(re.search(r"-\s*\[x\]\s*<big><big>已读</big></big>", text))
+    except Exception:
+        return False
+
+
+def build_note_info(filepath, source):
+    """Build note info dict for API response."""
+    metadata, body = parse_note(filepath)
+    title = metadata.get("title", extract_title_from_body(body) or filepath.stem)
+    note_type = metadata.get("type", "idea")
+    tags = metadata.get("tags", [])
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    note_date = metadata.get("date", "")
+    tldr = extract_tldr(body)
+    is_read = note_is_read(filepath) if source == "new" else True
+
+    return {
+        "filename": filepath.name,
+        "title": title,
+        "type": note_type,
+        "date": note_date,
+        "tags": tags,
+        "tldr": tldr,
+        "source": source,
+        "is_read": is_read,
+    }
+
+
+# ── Background Processing (index-note) ──────────────────────────────────
 
 def run_script(script_name, *args):
     """Run a Python script via uv and return stdout."""
@@ -286,17 +308,16 @@ def run_script(script_name, *args):
 
 
 PIPELINE_STEPS = [
-    {"key": "classify",  "label": "分类输入类型"},
-    {"key": "gen_id",    "label": "生成笔记编号"},
-    {"key": "download",  "label": "提取图片资源"},
-    {"key": "template",  "label": "加载笔记模板"},
-    {"key": "analyze",   "label": "AI 分析内容并填充模板"},
-    {"key": "write",     "label": "写入笔记文件"},
+    {"key": "classify", "label": "分类输入类型"},
+    {"key": "gen_id", "label": "生成笔记编号"},
+    {"key": "download", "label": "提取图片资源"},
+    {"key": "template", "label": "加载笔记模板"},
+    {"key": "analyze", "label": "AI 分析内容并填充模板"},
+    {"key": "write", "label": "写入笔记文件"},
 ]
 
 
 def make_steps(current_key, detail=""):
-    """Build a steps list with statuses for the frontend."""
     steps = []
     found_current = False
     for s in PIPELINE_STEPS:
@@ -311,12 +332,154 @@ def make_steps(current_key, detail=""):
 
 
 def finish_step(steps, key, detail=""):
-    """Mark a step as done in the steps list."""
     for s in steps:
         if s["key"] == key:
             s["status"] = "done"
             s["detail"] = detail
     return steps
+
+
+TYPE_ANALYSIS_STRATEGIES = {
+    "idea": """- State the core idea in plain language (Feynman Technique)
+- Identify the trigger context (what sparked the idea)
+- Challenge assumptions explicitly with a table
+- Design a "minimum viable experiment" to test the idea
+- Assign maturity level: seed / sprout / tree
+- Mark connection types: supports, contradicts, analogizes, extends""",
+    "project": """- Top-down first: purpose/problem, then architecture, then details
+- Read README.md first, then directory structure, then key source files
+- Focus on "when to use / when not to use"
+- Extract design decisions and their rationale
+- Identify entry points for understanding
+- Keep tech stack rationale""",
+    "book": """- Apply Adler's analytical reading: classify type, state central thesis, identify argument structure
+- Extract key concepts using Feynman Technique
+- Trace argument flow as structure map (NOT chapter-by-chapter summaries)
+- Engage in dialogue: agree, question, disagree
+- Identify blind spots and unstated assumptions
+- Must have at least one "immediate application" action item""",
+    "paper": """- "In My Own Words" section is MANDATORY
+- Extract problem -> motivation -> gap -> solution chain
+- Focus on innovations: what's genuinely new vs. incremental
+- Identify what this paper "opens up"
+- Position in field: classify related work as precursor, competitor, or successor
+- Score with brief rationale per dimension""",
+    "webinfo": """- Apply SIFT method for credibility
+- Estimate "information half-life"
+- Separate facts from opinions from predictions
+- Identify what's NOT said
+- Must answer "so what?"—what does this mean for my work""",
+    "webnews": """- Apply 5W1H as a compact table
+- Separate verifiable facts from media narrative
+- Signal vs Noise assessment
+- Stakeholder analysis with explicit motivations
+- Record a personal prediction""",
+}
+
+
+def build_analysis_prompt(input_text, input_type, note_type, note_id, today, template_content, images_json, prefetched_content=""):
+    images_note = ""
+    if images_json:
+        images_note = f"\n\nExtracted images (use Obsidian embed format ![[filename|600]]):\n{images_json}"
+
+    content_section = ""
+    if prefetched_content:
+        content_section = f"\n\nPREFETCHED CONTENT (already retrieved, use this directly — do NOT call WebFetch):\n{prefetched_content}"
+
+    strategy = TYPE_ANALYSIS_STRATEGIES.get(note_type, "")
+
+    return f"""You are IndexNote. Analyze the following input and produce a complete Obsidian note.
+Output ONLY the raw markdown of the note (starting with --- frontmatter). No explanations, no code fences.
+
+INPUT: {input_text}
+INPUT TYPE: {input_type}
+CLASSIFIED AS: {note_type}
+NOTE ID: {note_id}
+DATE: {today}{images_note}{content_section}
+
+TEMPLATE:
+{template_content}
+
+COGNITIVE SCIENCE PRINCIPLES (apply to ALL note types):
+1. TL;DR first (Cognitive Load Theory): Start with a 1-3 sentence executive summary in a > [!abstract] TL;DR callout.
+2. Self-explanation (Chi et al., 1989): Restate key ideas in your own words rather than copying.
+3. "So What?" (Elaborative Interrogation): Every note must answer "how does this change what I do?"
+4. Typed connections (Zettelkasten): Classify relationships (supports, contradicts, extends, applies).
+5. Retrieval cues (Testing Effect): End with specific scenario triggers ("when would I come back to this?").
+6. Separate facts from interpretations: Keep verifiable facts distinct from subjective analysis.
+
+TYPE-SPECIFIC ANALYSIS STRATEGY ({note_type}):
+{strategy}
+
+FORMATTING RULES:
+- YAML frontmatter between --- markers
+- Tags: hyphens not spaces (machine-learning not machine learning)
+- Wikilinks: [[Target|Display]] with display alias
+- Images: ![[filename.png|600]] (Obsidian wikilink format)
+- Missing data: -- (not --- which renders as horizontal rule)
+- Formulas: inline $...$ and block $$...$$
+- Bilingual headers: ## English (中文)
+
+INSTRUCTIONS:
+1. Analyze the content thoroughly following the type-specific strategy above.
+2. Fill ALL template sections with substantive content. Replace all {{{{PLACEHOLDER}}}} values.
+3. Apply ALL 6 cognitive science principles.
+4. Output ONLY the completed note as raw markdown starting with --- frontmatter. Do NOT use any tools. Do NOT wrap in code fences."""
+
+
+def extract_markdown_from_output(output):
+    text = output.strip()
+    if text.startswith("```"):
+        first_newline = text.find("\n")
+        if first_newline > 0:
+            text = text[first_newline + 1:]
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3].rstrip()
+    idx = text.find("---")
+    if idx >= 0:
+        second = text.find("---", idx + 3)
+        if second >= 0:
+            return text[idx:].strip()
+    return text.strip()
+
+
+def build_fallback_note(input_text, note_type, note_id, today, template_content):
+    title = input_text[:80].strip()
+    if title.startswith("http"):
+        from urllib.parse import urlparse
+        parsed = urlparse(title)
+        title = parsed.path.split("/")[-1] or parsed.netloc
+    elif os.path.isfile(title):
+        title = Path(title).stem
+
+    return f"""---
+date: "{today}"
+type: {note_type}
+id: {note_id}
+title: "{title}"
+tags: [{note_type}]
+status: pending
+---
+
+# {title}
+
+> [!abstract] TL;DR
+> (待 AI 分析填充)
+
+## Source (来源)
+
+{input_text}
+
+## Notes (备注)
+
+本笔记由 WebUI 创建，AI 分析未完成。可使用以下命令重新生成完整内容：
+
+`/index-note {input_text}`
+
+---
+
+- [ ] <big><big>已读</big></big>
+"""
 
 
 def process_note(task_id, input_text, input_type):
@@ -337,12 +500,12 @@ def process_note(task_id, input_text, input_type):
         finish_step(steps, "classify", f"{type_label} (置信度 {confidence})")
         update_task(task_id, status="generating_id", progress="正在生成编号...", steps=steps)
         NEW_DIR.mkdir(parents=True, exist_ok=True)
-        note_num = run_script("generate_id.py", "--type", note_type, "--vault-new-dir", str(NEW_DIR))
+        note_num = run_script("generate_id.py", "--type", note_type, "--vault-new-dir", str(NEW_DIR), "--vault-deep-dir", str(DEEP_DIR))
         today = date.today().isoformat()
         note_id = f"{today}_{note_type}_{note_num}"
         note_filename = f"{note_id}.md"
 
-        # Step 3: Extract images (for paper, book, project)
+        # Step 3: Extract images
         images_json = None
         steps = make_steps("download")
         finish_step(steps, "classify", f"{type_label} (置信度 {confidence})")
@@ -389,10 +552,9 @@ def process_note(task_id, input_text, input_type):
 
         note_path = NEW_DIR / note_filename
 
-        # Pre-fetch content so Claude doesn't need any tools
+        # Pre-fetch content
         prefetched_content = ""
         if classification.get("is_local_path") and os.path.isfile(input_text):
-            # Local file: extract text content
             update_task(task_id, status="analyzing", progress="正在读取文件内容...", steps=steps)
             file_ext = os.path.splitext(input_text)[1].lower()
             try:
@@ -415,10 +577,9 @@ def process_note(task_id, input_text, input_type):
                     )
                     if fetch_result.returncode == 0 and fetch_result.stdout.strip():
                         prefetched_content = fetch_result.stdout.strip()
-            except Exception as e:
-                print(f"[WARN] File content extraction failed: {e}")
+            except Exception:
+                pass
         elif classification.get("is_url"):
-            # URL: fetch web content
             update_task(task_id, status="analyzing", progress="正在获取网页内容...", steps=steps)
             try:
                 fetch_result = subprocess.run(
@@ -437,7 +598,6 @@ def process_note(task_id, input_text, input_type):
             except Exception:
                 pass
         elif input_type == "text" and re.match(r"^\d{4}\.\d{4,5}(v\d+)?$", input_text.strip()):
-            # arXiv bare ID: fetch metadata
             update_task(task_id, status="analyzing", progress="正在获取 arXiv 元数据...", steps=steps)
             try:
                 fetch_result = subprocess.run(
@@ -452,67 +612,33 @@ def process_note(task_id, input_text, input_type):
             except Exception:
                 pass
 
-        steps_copy = [dict(s) for s in steps]
-        for s in steps_copy:
-            if s["key"] == "analyze":
-                s["detail"] = "这一步耗时较长，请耐心等待..."
-        update_task(task_id, status="analyzing", progress="AI 分析中...", steps=steps_copy)
-
         prompt = build_analysis_prompt(input_text, input_type, note_type, note_id, today, template_content, images_json, prefetched_content)
         ai_ok = False
 
-        # Write debug info to file (Flask subprocess stdout is not always visible)
-        debug_log = PROJECT_ROOT / "webUI" / "debug.log"
-        with open(debug_log, "a", encoding="utf-8") as f:
-            f.write(f"\n===== task={task_id} =====\n")
-            f.write(f"input_text={input_text}\n")
-            f.write(f"is_local_path={classification.get('is_local_path')}\n")
-            f.write(f"is_url={classification.get('is_url')}\n")
-            f.write(f"file_exists={os.path.isfile(input_text)}\n")
-            f.write(f"prefetched_content length={len(prefetched_content)}\n")
-            f.write(f"prompt length={len(prompt)}\n")
-
         try:
-            # Pass prompt via stdin; inherit full parent env for auth tokens
             env = os.environ.copy()
             result = subprocess.run(
                 ["claude", "-p", "-"],
                 input=prompt,
-                capture_output=True,
-                text=True,
-                cwd=str(PROJECT_ROOT),
-                timeout=480,
-                env=env,
+                capture_output=True, text=True,
+                cwd=str(PROJECT_ROOT), timeout=480, env=env,
             )
-            with open(debug_log, "a", encoding="utf-8") as f:
-                f.write(f"claude returncode={result.returncode}\n")
-                f.write(f"claude stdout length={len(result.stdout)}\n")
-                f.write(f"claude stdout[:300]={result.stdout[:300]!r}\n")
-                if result.stderr:
-                    f.write(f"claude stderr[:500]={result.stderr[:500]!r}\n")
-
             if result.returncode == 0 and result.stdout.strip():
                 note_content = extract_markdown_from_output(result.stdout.strip())
                 if note_content.startswith("---"):
                     note_path.write_text(note_content, encoding="utf-8")
                     ai_ok = True
                 else:
-                    note_content = build_fallback_note(input_text, note_type, note_id, today, template_content)
-                    note_path.write_text(note_content, encoding="utf-8")
+                    note_path.write_text(build_fallback_note(input_text, note_type, note_id, today, template_content), encoding="utf-8")
             else:
-                # Detect auth errors and report clearly
                 stdout_text = result.stdout.strip() if result.stdout else ""
                 if "authentication_error" in stdout_text or "OAuth token has expired" in stdout_text:
                     raise RuntimeError("Claude CLI 认证已过期。请在终端运行 `claude login` 刷新登录凭证后重试。")
-                note_content = build_fallback_note(input_text, note_type, note_id, today, template_content)
-                note_path.write_text(note_content, encoding="utf-8")
+                note_path.write_text(build_fallback_note(input_text, note_type, note_id, today, template_content), encoding="utf-8")
         except subprocess.TimeoutExpired:
-            with open(debug_log, "a", encoding="utf-8") as f:
-                f.write(f"claude TIMED OUT\n")
-            note_content = build_fallback_note(input_text, note_type, note_id, today, template_content)
-            note_path.write_text(note_content, encoding="utf-8")
+            note_path.write_text(build_fallback_note(input_text, note_type, note_id, today, template_content), encoding="utf-8")
 
-        # Step 6: Write note
+        # Step 6: Finalize
         steps = make_steps("write")
         finish_step(steps, "classify", f"{type_label} (置信度 {confidence})")
         finish_step(steps, "gen_id", note_id)
@@ -521,7 +647,6 @@ def process_note(task_id, input_text, input_type):
         finish_step(steps, "analyze", "AI 分析完成" if ai_ok else "已使用基础模板")
         update_task(task_id, status="writing", progress="正在写入...", steps=steps)
 
-        # Step 6.5: Finalize images — keep only those referenced in the note
         if note_type in ("paper", "book", "project") and temp_img_dir.exists():
             try:
                 fin_cmd = [
@@ -531,24 +656,18 @@ def process_note(task_id, input_text, input_type):
                     "--images-dir", str(IMAGES_DIR),
                     "--note-id", note_id,
                 ]
-                subprocess.run(fin_cmd, capture_output=True, text=True,
-                               cwd=str(PROJECT_ROOT), timeout=30)
+                subprocess.run(fin_cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT), timeout=30)
             except Exception:
-                # Best-effort cleanup; don't fail the task
                 pass
 
         metadata, body = parse_note(note_path)
         title = metadata.get("title", extract_title_from_body(body) or input_text[:50])
 
-        # All done
         for s in steps:
             s["status"] = "done"
         finish_step(steps, "write", note_filename)
         update_task(
-            task_id,
-            status="completed",
-            progress="处理完成",
-            steps=steps,
+            task_id, status="completed", progress="处理完成", steps=steps,
             result={"note_path": note_filename, "note_type": note_type, "title": title},
         )
 
@@ -556,156 +675,59 @@ def process_note(task_id, input_text, input_type):
         update_task(task_id, status="error", progress="处理出错", error=str(e))
 
 
-TYPE_ANALYSIS_STRATEGIES = {
-    "idea": """- State the core idea in plain language (Feynman Technique)
-- Identify the trigger context (what sparked the idea)
-- Challenge assumptions explicitly with a table (assumption / why it holds / what if wrong)
-- Design a "minimum viable experiment" to test the idea
-- Assign maturity level: seed (just captured) / sprout (developed) / tree (validated)
-- Mark connection types: supports, contradicts, analogizes, extends""",
-    "project": """- Top-down first (Brooks' model): Start with purpose/problem, then architecture, then details
-- Read README.md first, then directory structure, then key source files
-- Focus on "when to use / when not to use" — highest retrieval value
-- Extract design decisions and their rationale (not just patterns observed)
-- Identify entry points for understanding (which files to read first)
-- Keep tech stack rationale (why chosen, not just what)""",
-    "book": """- Apply Adler's analytical reading: classify type, state central thesis, identify argument structure
-- Extract key concepts using Feynman Technique (define, explain simply, identify application)
-- Do NOT write chapter-by-chapter summaries (low retrieval value). Trace argument flow as structure map
-- Engage in dialogue: agree, question, disagree (Adler's "Criticizing a Book Fairly")
-- Identify blind spots and unstated assumptions
-- Must have at least one "immediate application" action item
-- Assess mental model shift: what do you think differently after reading?""",
-    "paper": """- "In My Own Words" section is MANDATORY: write a plain-language explanation before technical details (self-explanation effect)
-- Extract problem → motivation → gap → solution chain (not just "what they did")
-- Focus on innovations: what's genuinely new vs. incremental engineering
-- Identify what this paper "opens up" — what new research questions become possible
-- Position in field: classify related work as precursor, competitor, or successor
-- Score with brief rationale per dimension (not just numbers)""",
-    "webinfo": """- Apply SIFT method (Stop, Investigate, Find better coverage, Trace claims) for credibility
-- Estimate "information half-life": how quickly will this become outdated? (long/medium/short)
-- Separate facts from opinions from predictions in a structured table
-- Identify what's NOT said (missing perspectives, uncovered data)
-- Must answer "so what?" — what does this mean for my work specifically""",
-    "webnews": """- Apply 5W1H as a compact table (not 6 separate sections)
-- Separate verifiable facts from media narrative
-- Signal vs Noise assessment: what's genuinely important vs. media amplification
-- Stakeholder analysis with explicit motivations
-- Record a personal prediction (what will happen next + rationale + verification timeline)""",
-}
+# ── Background Processing (index-chat) ──────────────────────────────────
+
+def process_chat(task_id, user_message):
+    """Run index-chat via Claude CLI in background thread."""
+    try:
+        update_task(task_id, status="running", progress="正在检索记忆并生成回答...")
+        env = os.environ.copy()
+        prompt = f'/index-chat {user_message}'
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True, text=True,
+            cwd=str(PROJECT_ROOT), timeout=300, env=env,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            response = result.stdout.strip()
+            update_task(task_id, status="completed", progress="完成", result={"response": response})
+        else:
+            stderr = result.stderr.strip() if result.stderr else ""
+            stdout = result.stdout.strip() if result.stdout else ""
+            if "authentication_error" in stdout or "OAuth token has expired" in stdout:
+                raise RuntimeError("Claude CLI 认证已过期。请运行 `claude login`。")
+            raise RuntimeError(f"Chat failed: {stderr or stdout or 'unknown error'}")
+    except subprocess.TimeoutExpired:
+        update_task(task_id, status="error", error="聊天请求超时，请稍后重试")
+    except Exception as e:
+        update_task(task_id, status="error", error=str(e))
 
 
-def build_analysis_prompt(input_text, input_type, note_type, note_id, today, template_content, images_json, prefetched_content=""):
-    """Build a focused prompt for Claude to analyze content and fill the template."""
-    images_note = ""
-    if images_json:
-        images_note = f"\n\nExtracted images (use Obsidian embed format ![[filename|600]]):\n{images_json}"
+# ── Background Processing (index-update) ────────────────────────────────
 
-    content_section = ""
-    if prefetched_content:
-        content_section = f"\n\nPREFETCHED CONTENT (already retrieved, use this directly — do NOT call WebFetch):\n{prefetched_content}"
-
-    strategy = TYPE_ANALYSIS_STRATEGIES.get(note_type, "")
-
-    return f"""You are IndexNote. Analyze the following input and produce a complete Obsidian note.
-Output ONLY the raw markdown of the note (starting with --- frontmatter). No explanations, no code fences.
-
-INPUT: {input_text}
-INPUT TYPE: {input_type}
-CLASSIFIED AS: {note_type}
-NOTE ID: {note_id}
-DATE: {today}{images_note}{content_section}
-
-TEMPLATE:
-{template_content}
-
-COGNITIVE SCIENCE PRINCIPLES (apply to ALL note types):
-1. TL;DR first (Cognitive Load Theory): Start with a 1-3 sentence executive summary in a > [!abstract] TL;DR callout.
-2. Self-explanation (Chi et al., 1989): Restate key ideas in your own words rather than copying.
-3. "So What?" (Elaborative Interrogation): Every note must answer "how does this change what I do?"
-4. Typed connections (Zettelkasten): Classify relationships (supports, contradicts, extends, applies).
-5. Retrieval cues (Testing Effect): End with specific scenario triggers ("when would I come back to this?").
-6. Separate facts from interpretations: Keep verifiable facts distinct from subjective analysis.
-
-TYPE-SPECIFIC ANALYSIS STRATEGY ({note_type}):
-{strategy}
-
-FORMATTING RULES:
-- YAML frontmatter between --- markers
-- Tags: hyphens not spaces (machine-learning not machine learning)
-- Wikilinks: [[Target|Display]] with display alias
-- Images: ![[filename.png|600]] (Obsidian wikilink format)
-- Missing data: -- (not --- which renders as horizontal rule)
-- Formulas: inline $...$ and block $$...$$
-- Bilingual headers: ## English (中文)
-
-INSTRUCTIONS:
-1. Analyze the content thoroughly following the type-specific strategy above.
-2. Fill ALL template sections with substantive content. Replace all {{{{PLACEHOLDER}}}} values.
-3. Apply ALL 6 cognitive science principles — especially TL;DR first, self-explanation, and retrieval cues.
-4. Output ONLY the completed note as raw markdown starting with --- frontmatter. Do NOT use any tools. Do NOT wrap in code fences."""
-
-
-def extract_markdown_from_output(output):
-    """Extract markdown content from Claude CLI output."""
-    text = output.strip()
-
-    # Strip code fences if Claude wrapped output in ```markdown ... ```
-    if text.startswith("```"):
-        first_newline = text.find("\n")
-        if first_newline > 0:
-            text = text[first_newline + 1:]
-        if text.rstrip().endswith("```"):
-            text = text.rstrip()[:-3].rstrip()
-
-    # Find frontmatter start (---)
-    idx = text.find("---")
-    if idx >= 0:
-        second = text.find("---", idx + 3)
-        if second >= 0:
-            return text[idx:].strip()
-
-    return text.strip()
-
-
-def build_fallback_note(input_text, note_type, note_id, today, template_content):
-    """Build a basic note when AI analysis fails or times out."""
-    # Extract a usable title from input
-    title = input_text[:80].strip()
-    if title.startswith("http"):
-        from urllib.parse import urlparse
-        parsed = urlparse(title)
-        title = parsed.path.split("/")[-1] or parsed.netloc
-    elif os.path.isfile(title):
-        title = Path(title).stem
-
-    # Always generate a clean minimal note (don't try to partially fill the template
-    # because templates have many type-specific placeholders that can't be filled without AI)
-    content = f"""---
-date: "{today}"
-type: {note_type}
-id: {note_id}
-title: "{title}"
-tags: [{note_type}]
-status: pending
----
-
-# {title}
-
-> [!abstract] TL;DR
-> (待 AI 分析填充)
-
-## Source (来源)
-
-{input_text}
-
-## Notes (备注)
-
-本笔记由 WebUI 创建，AI 分析未完成。可使用以下命令重新生成完整内容：
-
-`/index-note {input_text}`
-"""
-    return content
+def process_update(task_id):
+    """Run index-update via Claude CLI in background thread."""
+    try:
+        update_task(task_id, status="running", progress="正在扫描已读笔记，提取知识并归档...")
+        env = os.environ.copy()
+        result = subprocess.run(
+            ["claude", "-p", "/index-update"],
+            capture_output=True, text=True,
+            cwd=str(PROJECT_ROOT), timeout=600, env=env,
+        )
+        if result.returncode == 0:
+            response = result.stdout.strip() if result.stdout else "归档整理完成"
+            update_task(task_id, status="completed", progress="完成", result={"response": response})
+        else:
+            stderr = result.stderr.strip() if result.stderr else ""
+            stdout = result.stdout.strip() if result.stdout else ""
+            if "authentication_error" in stdout or "OAuth token has expired" in stdout:
+                raise RuntimeError("Claude CLI 认证已过期。请运行 `claude login`。")
+            raise RuntimeError(f"Update failed: {stderr or stdout or 'unknown error'}")
+    except subprocess.TimeoutExpired:
+        update_task(task_id, status="error", error="归档整理超时")
+    except Exception as e:
+        update_task(task_id, status="error", error=str(e))
 
 
 # ── Routes ───────────────────────────────────────────────────────────────
@@ -714,7 +736,7 @@ status: pending
 def index():
     persona = VAULT_PATH / "persona.md"
     if persona.exists():
-        return redirect(url_for("vault_view"))
+        return redirect(url_for("app_view"))
     return redirect(url_for("init_view"))
 
 
@@ -723,26 +745,29 @@ def init_view():
     return render_template("init.html")
 
 
-@app.route("/vault")
-def vault_view():
-    return render_template("vault.html")
+@app.route("/app")
+def app_view():
+    persona = VAULT_PATH / "persona.md"
+    if not persona.exists():
+        return redirect(url_for("init_view"))
+    return render_template("app.html")
 
 
-@app.route("/note/<filename>")
-def note_detail(filename):
-    return render_template("note_detail.html", filename=filename)
+@app.route("/note/<source>/<filename>")
+def note_detail(source, filename):
+    if source not in ("new", "archived"):
+        abort(404)
+    return render_template("note_detail.html", source=source, filename=filename)
 
 
 @app.route("/vault/images/<filename>")
 def vault_image(filename):
-    # Search in per-note subdirectories first (new structure)
     if IMAGES_DIR.is_dir():
         for subdir in IMAGES_DIR.iterdir():
             if subdir.is_dir() and not subdir.name.startswith("_tmp"):
                 candidate = subdir / filename
                 if candidate.is_file():
                     return send_from_directory(str(subdir), filename)
-    # Fallback: flat structure (legacy)
     return send_from_directory(str(IMAGES_DIR), filename)
 
 
@@ -770,16 +795,13 @@ def api_init():
         return jsonify({"error": f"Invalid MBTI type: {mbti_type}"}), 400
 
     try:
-        # Step 1: Create directories
-        for d in [NEW_DIR, DEEP_DIR, MEMORY_DIR, IMAGES_DIR, DOWNLOADS_DIR, TEMPLATE_DIR, VAULT_PATH / ".obsidian"]:
+        for d in [NEW_DIR, DEEP_DIR, MEMORY_DIR, IMAGES_DIR, DOWNLOADS_DIR, TEMPLATE_DIR, CHAT_DIR, VAULT_PATH / ".obsidian"]:
             d.mkdir(parents=True, exist_ok=True)
 
-        # Step 2: Copy templates
         if RESOURCES_DIR.exists():
             for tmpl in RESOURCES_DIR.glob("*.md"):
                 shutil.copy2(str(tmpl), str(TEMPLATE_DIR / tmpl.name))
 
-        # Step 3: Write Obsidian config
         obsidian_dir = VAULT_PATH / ".obsidian"
         (obsidian_dir / "core-plugins.json").write_text(
             json.dumps([
@@ -793,16 +815,11 @@ def api_init():
         (obsidian_dir / "app.json").write_text("{}", encoding="utf-8")
         (obsidian_dir / "appearance.json").write_text("{}", encoding="utf-8")
 
-        # Step 4: Generate persona.md
         persona_content = generate_persona_md(profession, mbti_type)
         (VAULT_PATH / "persona.md").write_text(persona_content, encoding="utf-8")
 
         info = MBTI_TYPES[mbti_type]
-        return jsonify({
-            "success": True,
-            "mbti_type": mbti_type,
-            "nickname": info["nickname"],
-        })
+        return jsonify({"success": True, "mbti_type": mbti_type, "nickname": info["nickname"]})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -810,44 +827,78 @@ def api_init():
 
 @app.route("/api/notes")
 def api_notes():
+    """List notes. ?status=new|read|archived"""
+    status = request.args.get("status", "new")
     notes = []
-    if not NEW_DIR.exists():
-        return jsonify(notes)
 
-    for filepath in sorted(NEW_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True):
-        metadata, body = parse_note(filepath)
-        title = metadata.get("title", extract_title_from_body(body) or filepath.stem)
-        note_type = metadata.get("type", "idea")
-        tags = metadata.get("tags", [])
-        if isinstance(tags, str):
-            tags = [t.strip() for t in tags.split(",") if t.strip()]
-        note_date = metadata.get("date", "")
-        tldr = extract_tldr(body)
-
-        notes.append({
-            "filename": filepath.name,
-            "title": title,
-            "type": note_type,
-            "date": note_date,
-            "tags": tags,
-            "tldr": tldr,
-        })
+    if status in ("new", "read"):
+        if NEW_DIR.exists():
+            for fp in sorted(NEW_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True):
+                is_read = note_is_read(fp)
+                if (status == "new" and not is_read) or (status == "read" and is_read):
+                    notes.append(build_note_info(fp, "new"))
+    elif status == "archived":
+        if DEEP_DIR.exists():
+            for fp in sorted(DEEP_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True):
+                notes.append(build_note_info(fp, "archived"))
 
     return jsonify(notes)
 
 
-@app.route("/api/note/<filename>")
-def api_note(filename):
-    filepath = NEW_DIR / filename
+@app.route("/api/note/<source>/<filename>")
+def api_note(source, filename):
+    if source == "new":
+        filepath = NEW_DIR / filename
+    elif source == "archived":
+        filepath = DEEP_DIR / filename
+    else:
+        return jsonify({"error": "Invalid source"}), 400
+
     if not filepath.exists() or not filepath.is_file():
         return jsonify({"error": "Note not found"}), 404
 
     metadata, body = parse_note(filepath)
     return jsonify({
         "filename": filename,
+        "source": source,
         "metadata": metadata,
         "content": body,
+        "is_read": note_is_read(filepath),
     })
+
+
+@app.route("/api/note/toggle-read", methods=["POST"])
+def api_toggle_read():
+    """Toggle the read marker checkbox in a note."""
+    data = request.get_json()
+    filename = data.get("filename", "")
+    filepath = NEW_DIR / filename
+
+    if not filepath.exists():
+        return jsonify({"error": "Note not found"}), 404
+
+    text = filepath.read_text(encoding="utf-8")
+
+    # Toggle: checked -> unchecked or unchecked -> checked
+    if re.search(r"-\s*\[x\]\s*<big><big>已读</big></big>", text):
+        text = re.sub(
+            r"-\s*\[x\]\s*<big><big>已读</big></big>",
+            "- [ ] <big><big>已读</big></big>",
+            text,
+        )
+        new_state = False
+    elif re.search(r"-\s*\[ \]\s*<big><big>已读</big></big>", text):
+        text = re.sub(
+            r"-\s*\[ \]\s*<big><big>已读</big></big>",
+            "- [x] <big><big>已读</big></big>",
+            text,
+        )
+        new_state = True
+    else:
+        return jsonify({"error": "Read marker not found in note"}), 400
+
+    filepath.write_text(text, encoding="utf-8")
+    return jsonify({"success": True, "is_read": new_state})
 
 
 @app.route("/api/process", methods=["POST"])
@@ -859,12 +910,10 @@ def api_process():
         input_text = request.form.get("input_text", "").strip()
         if not input_text:
             return jsonify({"error": "Text input is required"}), 400
-
     elif input_type == "url":
         input_text = request.form.get("input_text", "").strip()
         if not input_text:
             return jsonify({"error": "URL is required"}), 400
-
     elif input_type == "file":
         file = request.files.get("file")
         if not file or file.filename == "":
@@ -873,24 +922,52 @@ def api_process():
         save_path = DOWNLOADS_DIR / file.filename
         file.save(str(save_path))
         input_text = str(save_path)
-
     else:
         return jsonify({"error": "Invalid input type"}), 400
 
     task_id = uuid.uuid4().hex[:12]
     with tasks_lock:
         tasks[task_id] = {
-            "status": "pending",
-            "progress": "任务已创建...",
-            "result": None,
-            "error": None,
-            "input_text": input_text,
-            "input_type": input_type,
+            "status": "pending", "progress": "任务已创建...",
+            "result": None, "error": None,
+            "input_text": input_text, "input_type": input_type,
         }
 
     thread = threading.Thread(target=process_note, args=(task_id, input_text, input_type), daemon=True)
     thread.start()
+    return jsonify({"task_id": task_id})
 
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    data = request.get_json()
+    message = data.get("message", "").strip()
+    if not message:
+        return jsonify({"error": "Message is required"}), 400
+
+    task_id = uuid.uuid4().hex[:12]
+    with tasks_lock:
+        tasks[task_id] = {
+            "status": "pending", "progress": "正在处理...",
+            "result": None, "error": None,
+        }
+
+    thread = threading.Thread(target=process_chat, args=(task_id, message), daemon=True)
+    thread.start()
+    return jsonify({"task_id": task_id})
+
+
+@app.route("/api/update", methods=["POST"])
+def api_update():
+    task_id = uuid.uuid4().hex[:12]
+    with tasks_lock:
+        tasks[task_id] = {
+            "status": "pending", "progress": "正在启动归档整理...",
+            "result": None, "error": None,
+        }
+
+    thread = threading.Thread(target=process_update, args=(task_id,), daemon=True)
+    thread.start()
     return jsonify({"task_id": task_id})
 
 
@@ -903,11 +980,52 @@ def api_task(task_id):
     return jsonify({
         "task_id": task_id,
         "status": task["status"],
-        "progress": task["progress"],
+        "progress": task.get("progress", ""),
         "steps": task.get("steps", []),
         "result": task.get("result"),
         "error": task.get("error"),
     })
+
+
+@app.route("/api/persona")
+def api_persona():
+    persona_path = VAULT_PATH / "persona.md"
+    if not persona_path.exists():
+        return jsonify({"exists": False})
+    metadata, body = parse_note(persona_path)
+    raw = persona_path.read_text(encoding="utf-8")
+    return jsonify({"exists": True, "metadata": metadata, "content": body, "raw": raw})
+
+
+@app.route("/api/persona", methods=["PUT"])
+def api_persona_save():
+    data = request.get_json()
+    raw = data.get("raw", "")
+    if not raw.strip():
+        return jsonify({"error": "Content cannot be empty"}), 400
+    persona_path = VAULT_PATH / "persona.md"
+    persona_path.write_text(raw, encoding="utf-8")
+    return jsonify({"success": True})
+
+
+@app.route("/api/stats")
+def api_stats():
+    """Return counts for sidebar badges."""
+    new_count = 0
+    read_count = 0
+    archived_count = 0
+
+    if NEW_DIR.exists():
+        for fp in NEW_DIR.glob("*.md"):
+            if note_is_read(fp):
+                read_count += 1
+            else:
+                new_count += 1
+
+    if DEEP_DIR.exists():
+        archived_count = sum(1 for _ in DEEP_DIR.glob("*.md"))
+
+    return jsonify({"new": new_count, "read": read_count, "archived": archived_count})
 
 
 # ── Main ─────────────────────────────────────────────────────────────────
@@ -916,5 +1034,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     print(f"Project root: {PROJECT_ROOT}")
     print(f"Vault path:   {VAULT_PATH}")
-    print(f"Starting 茵蒂克丝.skill WebUI on http://localhost:{port}")
+    print(f"Starting on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=True)
