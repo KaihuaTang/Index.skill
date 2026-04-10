@@ -43,6 +43,16 @@
 </div>
 
 ---
+本项目也支持本地webUI网页部署，更方便使用哦~
+直接使用Claude Code打开项目文件夹，要求其部署webUI文件夹下的网页即可。下面是webUI的一些运行截图。
+
+<div align="center">
+
+<img src="./assets/web-demo.png" alt="茵蒂克丝 WebUI" width="100%"/>
+
+</div>
+
+---
 
 ## 🔄 Workflow
 
