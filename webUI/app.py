@@ -170,7 +170,7 @@ def derive_exploration_exploitation(mbti):
     return f"情境适应偏探索({s_n}{j_p})", f"虽有感觉驱动的务实倾向({s_n})，但知觉特质({j_p})使其乐于尝试新的可能性"
 
 
-def generate_persona_md(profession, mbti_type):
+def generate_persona_md(profession, mbti_type, extra_traits=""):
     info = MBTI_TYPES.get(mbti_type, {"nickname": mbti_type, "traits": ""})
     desc = generate_mbti_description(mbti_type)
     t1_label, t1_desc = derive_convergent_divergent(mbti_type)
@@ -205,7 +205,11 @@ created: "{today}"
 | 分析型/整体型 | {t3_label} | {t3_desc} |
 | 趋近/回避导向 | {t4_label} | {t4_desc} |
 | 探索/利用倾向 | {t5_label} | {t5_desc} |
-"""
+""" + (f"""
+## Extra Traits (额外性格特质)
+
+{extra_traits}
+""" if extra_traits else "")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -781,6 +785,7 @@ def api_init():
 
     profession = data.get("profession", "").strip()
     mbti_data = data.get("mbti", {})
+    extra_traits = data.get("extra_traits", "").strip()
     if not profession:
         return jsonify({"error": "Profession is required"}), 400
 
@@ -815,7 +820,7 @@ def api_init():
         (obsidian_dir / "app.json").write_text("{}", encoding="utf-8")
         (obsidian_dir / "appearance.json").write_text("{}", encoding="utf-8")
 
-        persona_content = generate_persona_md(profession, mbti_type)
+        persona_content = generate_persona_md(profession, mbti_type, extra_traits)
         (VAULT_PATH / "persona.md").write_text(persona_content, encoding="utf-8")
 
         info = MBTI_TYPES[mbti_type]

@@ -15,7 +15,7 @@
         <!-- Progress bar -->
         <div class="init-progress">
             <div class="progress-track">
-                <div class="progress-fill" id="progress-fill" style="width: 16.67%"></div>
+                <div class="progress-fill" id="progress-fill" style="width: 14.29%"></div>
             </div>
             <div class="progress-steps">
                 <span class="progress-step active" data-step="1">
@@ -40,6 +40,10 @@
                 </span>
                 <span class="progress-step" data-step="6">
                     <span class="step-num">6</span>
+                    <span class="step-text">特质</span>
+                </span>
+                <span class="progress-step" data-step="7">
+                    <span class="step-num">7</span>
                     <span class="step-text">确认</span>
                 </span>
             </div>
@@ -183,8 +187,19 @@
             </div>
         </div>
 
-        <!-- Step 6: Confirm -->
+        <!-- Step 6: Extra Traits -->
         <div class="wizard-step d-none" id="step-6">
+            <h4>Extra Traits (额外性格特质)</h4>
+            <p class="hint">可选：描述您希望 Agent 具备的额外性格特质，例如：幽默感、毒舌但真诚、喜欢用比喻解释概念等</p>
+            <textarea class="form-input" id="extra-traits" rows="4" placeholder="请输入额外性格特质（可留空）..."></textarea>
+            <div class="step-actions">
+                <button class="btn-prev" onclick="initWizard.prev()"><i class="bi bi-arrow-left"></i> 上一步</button>
+                <button class="btn-next" onclick="initWizard.next()">下一步 <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Step 7: Confirm -->
+        <div class="wizard-step d-none" id="step-7">
             <h4>确认您的设置</h4>
             <div class="confirm-card">
                 <div class="confirm-row">
@@ -194,6 +209,10 @@
                 <div class="confirm-row">
                     <span class="confirm-label">MBTI 类型</span>
                     <span class="confirm-value confirm-mbti" id="confirm-mbti"></span>
+                </div>
+                <div class="confirm-row" id="confirm-traits-row" style="display: none;">
+                    <span class="confirm-label">额外特质</span>
+                    <span class="confirm-value" id="confirm-traits"></span>
                 </div>
             </div>
             <div class="step-actions">

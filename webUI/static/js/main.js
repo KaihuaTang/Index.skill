@@ -957,7 +957,7 @@ async function savePersona() {
 
 const initWizard = {
     currentStep: 1,
-    totalSteps: 6,
+    totalSteps: 7,
 
     show(step) {
         document.querySelectorAll('.wizard-step').forEach(el => el.classList.add('d-none'));
@@ -982,7 +982,7 @@ const initWizard = {
 
     next() {
         if (!this.validate()) return;
-        if (this.currentStep === 5) this.populateConfirm();
+        if (this.currentStep === 6) this.populateConfirm();
         if (this.currentStep < this.totalSteps) this.show(this.currentStep + 1);
     },
 
@@ -1014,8 +1014,16 @@ const initWizard = {
         const sn = document.querySelector('input[name="S_N"]:checked')?.value || '?';
         const tf = document.querySelector('input[name="T_F"]:checked')?.value || '?';
         const jp = document.querySelector('input[name="J_P"]:checked')?.value || '?';
+        const extraTraits = document.getElementById('extra-traits')?.value?.trim();
         document.getElementById('confirm-profession').textContent = profession;
         document.getElementById('confirm-mbti').textContent = ei + sn + tf + jp;
+        const traitsRow = document.getElementById('confirm-traits-row');
+        if (extraTraits) {
+            document.getElementById('confirm-traits').textContent = extraTraits;
+            traitsRow.style.display = '';
+        } else {
+            traitsRow.style.display = 'none';
+        }
     },
 
     async submit() {
@@ -1030,12 +1038,13 @@ const initWizard = {
             T_F: document.querySelector('input[name="T_F"]:checked')?.value,
             J_P: document.querySelector('input[name="J_P"]:checked')?.value,
         };
+        const extra_traits = document.getElementById('extra-traits')?.value?.trim() || '';
 
         try {
             const resp = await fetch('/api/init', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profession, mbti }),
+                body: JSON.stringify({ profession, mbti, extra_traits }),
             });
             const data = await resp.json();
 
