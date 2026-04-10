@@ -93,9 +93,13 @@ function convertCallouts(text) {
             }
 
             const content = contentLines.join('\n');
+            let renderedContent = content;
+            if (typeof marked !== 'undefined') {
+                renderedContent = marked.parse(content);
+            }
             result.push(`<div class="callout callout-${type}">`);
             result.push(`<div class="callout-title">${title}</div>`);
-            result.push(`<div class="callout-content">${content}</div>`);
+            result.push(`<div class="callout-content">${renderedContent}</div>`);
             result.push(`</div>`);
         } else {
             result.push(lines[i]);
@@ -326,6 +330,17 @@ async function loadNoteDetail(source, filename) {
         // Body
         document.getElementById('note-body').innerHTML = renderObsidianMarkdown(data.content);
 
+        // Personal notes textarea (only for _new/ notes)
+        if (source === 'new') {
+            const notesSection = document.getElementById('personal-notes-section');
+            notesSection.classList.remove('d-none');
+            // Pre-fill if there's existing content after the marker
+            const markerMatch = data.content.match(/\*\*（可选）笔记与想法\*\*[：:]\s*([\s\S]*?)$/);
+            if (markerMatch && markerMatch[1].trim()) {
+                document.getElementById('personal-notes').value = markerMatch[1].trim();
+            }
+        }
+
         // Actions (mark as read button, only for notes in _new/)
         const actionsDiv = document.getElementById('detail-actions');
         if (source === 'new') {
@@ -352,10 +367,11 @@ async function toggleRead(filename) {
     btn.disabled = true;
 
     try {
+        const personalNotes = document.getElementById('personal-notes')?.value?.trim() || '';
         const resp = await fetch('/api/note/toggle-read', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename }),
+            body: JSON.stringify({ filename, personal_notes: personalNotes }),
         });
         const data = await resp.json();
         if (data.success) {

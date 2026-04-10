@@ -877,12 +877,21 @@ def api_toggle_read():
     """Toggle the read marker checkbox in a note."""
     data = request.get_json()
     filename = data.get("filename", "")
+    personal_notes = data.get("personal_notes", "").strip()
     filepath = NEW_DIR / filename
 
     if not filepath.exists():
         return jsonify({"error": "Note not found"}), 404
 
     text = filepath.read_text(encoding="utf-8")
+
+    # Write personal notes into the note (replace everything after the marker)
+    if personal_notes:
+        text = re.sub(
+            r"(\*\*（可选）笔记与想法\*\*[：:])[\s\S]*$",
+            lambda m: m.group(1) + "\n" + personal_notes + "\n",
+            text,
+        )
 
     # Toggle: checked -> unchecked or unchecked -> checked
     if re.search(r"-\s*\[x\]\s*<big><big>已读</big></big>", text):

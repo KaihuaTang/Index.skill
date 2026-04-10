@@ -1448,6 +1448,25 @@ body {
     margin: 1.5rem 0;
 }
 
+.personal-notes-section {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.personal-notes-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.personal-notes-input {
+    resize: vertical;
+    min-height: 80px;
+    font-size: 0.92rem;
+}
+
 /* Callouts */
 .callout {
     border-left: 4px solid;
