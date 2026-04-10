@@ -61,14 +61,8 @@ def main():
     if not kept and os.path.isdir(target_dir) and not os.listdir(target_dir):
         os.rmdir(target_dir)
 
-    result = {
-        "note_id": args.note_id,
-        "kept": len(kept),
-        "removed": len(removed),
-        "kept_files": kept,
-        "removed_files": removed,
-    }
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    result = {"kept": len(kept), "removed": len(removed)}
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

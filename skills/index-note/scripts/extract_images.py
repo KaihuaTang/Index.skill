@@ -49,7 +49,7 @@ except ImportError:
 def download_arxiv_source(arxiv_id, temp_dir):
     """Download and extract arXiv source package."""
     source_url = f"https://arxiv.org/e-print/{arxiv_id}"
-    print(f"Downloading arXiv source: {source_url}")
+    print(f"Downloading arXiv source: {source_url}", file=sys.stderr)
 
     try:
         if HAS_REQUESTS:
@@ -80,14 +80,14 @@ def download_arxiv_source(arxiv_id, temp_dir):
                             continue
                         safe_members.append(member)
                     tar.extractall(path=temp_dir, members=safe_members)
-                print(f"Source extracted to: {temp_dir}")
+                print(f"Source extracted to: {temp_dir}", file=sys.stderr)
                 return True
             except tarfile.ReadError:
                 # Not a tar.gz -- might be a single file (e.g., .tex)
-                print("Source is not a tar.gz archive, skipping source extraction")
+                print("Source is not a tar.gz archive, skipping source extraction", file=sys.stderr)
                 return False
         else:
-            print(f"Download failed: HTTP {status}")
+            print(f"Download failed: HTTP {status}", file=sys.stderr)
             return False
     except Exception as e:
         logger.error("Failed to download source: %s", e)
@@ -98,7 +98,7 @@ def download_arxiv_pdf(arxiv_id, temp_dir):
     """Download arXiv PDF."""
     pdf_url = f"https://arxiv.org/pdf/{arxiv_id}"
     pdf_path = os.path.join(temp_dir, f"{arxiv_id}.pdf")
-    print(f"Downloading PDF: {pdf_url}")
+    print(f"Downloading PDF: {pdf_url}", file=sys.stderr)
 
     try:
         if HAS_REQUESTS:
@@ -128,7 +128,7 @@ def find_source_images(temp_dir):
     for fig_dir in figure_dirs:
         fig_path = os.path.join(temp_dir, fig_dir)
         if os.path.isdir(fig_path):
-            print(f"  Found figure directory: {fig_dir}/")
+            print(f"  Found figure directory: {fig_dir}/", file=sys.stderr)
             for fname in os.listdir(fig_path):
                 fpath = os.path.join(fig_path, fname)
                 if os.path.isfile(fpath) and fname not in seen:
@@ -151,14 +151,66 @@ def find_source_images(temp_dir):
 
 # ── PDF image extraction ────────────────────────────────────────────
 
+def _is_pixmap_blank(pix, threshold=0.03):
+    """Quick check if a pixmap is nearly all-black/blank by sampling pixels."""
+    samples = pix.samples
+    total = len(samples)
+    n = pix.n                       # bytes per pixel (channels incl. alpha)
+    if total == 0 or n == 0:
+        return True
+    num_pixels = total // n
+    pixel_step = max(1, num_pixels // 500)     # sample ~500 pixels
+    bright = 0
+    count = 0
+    for p in range(0, num_pixels, pixel_step):
+        offset = p * n
+        # Check max across all channels (skip alpha = last if present)
+        channels = n - pix.alpha if pix.alpha else n
+        max_val = max(samples[offset + c] for c in range(channels))
+        count += 1
+        if max_val > 15:
+            bright += 1
+    return count == 0 or (bright / count) < threshold
+
+
+def _extract_pixmap(doc, xref, smask_xref):
+    """Build a Pixmap from xref, applying SMask and CMYK conversion."""
+    pix = fitz.Pixmap(doc, xref)
+
+    # CMYK → RGB conversion (must happen before SMask compositing)
+    if pix.n - pix.alpha > 3:
+        pix = fitz.Pixmap(fitz.csRGB, pix)
+
+    # Apply soft mask if present — without this, masked images appear all-black
+    if smask_xref > 0:
+        try:
+            mask = fitz.Pixmap(doc, smask_xref)
+            if not pix.alpha:
+                pix = fitz.Pixmap(pix, 1)       # add alpha channel
+            pix.set_alpha(mask.samples)          # write mask into alpha
+        except Exception as e:
+            logger.debug("SMask apply failed (xref=%d): %s", xref, e)
+
+    # Final output must be RGB or RGBA (strip other spaces)
+    if pix.n - pix.alpha < 3:
+        pix = fitz.Pixmap(fitz.csRGB, pix)
+
+    return pix
+
+
 def extract_images_from_pdf(pdf_path, output_dir, note_id, start_idx=1,
                             min_width=200, min_height=200, min_bytes=5000):
-    """Extract images directly from a PDF file using PyMuPDF."""
+    """Extract images directly from a PDF file using PyMuPDF.
+
+    Uses Pixmap-based extraction so that SMask (soft-mask) layers are
+    composited and CMYK images are converted to RGB.  Falls back to
+    raw ``extract_image`` for edge cases.
+    """
     if not HAS_FITZ:
-        print("PyMuPDF not available, skipping PDF extraction")
+        print("PyMuPDF not available, skipping PDF extraction", file=sys.stderr)
         return []
 
-    print(f"Extracting images from PDF: {os.path.basename(pdf_path)}")
+    print(f"Extracting images from PDF: {os.path.basename(pdf_path)}", file=sys.stderr)
     try:
         doc = fitz.open(pdf_path)
     except Exception as e:
@@ -167,6 +219,7 @@ def extract_images_from_pdf(pdf_path, output_dir, note_id, start_idx=1,
 
     extracted = []
     skipped = 0
+    seen_xrefs = set()          # deduplicate across pages
     idx = start_idx
 
     try:
@@ -176,35 +229,72 @@ def extract_images_from_pdf(pdf_path, output_dir, note_id, start_idx=1,
 
             for img_info in images:
                 xref = img_info[0]
+                smask_xref = img_info[1]       # 0 means no soft-mask
+
+                if xref in seen_xrefs:
+                    continue
+                seen_xrefs.add(xref)
+
                 try:
-                    base_image = doc.extract_image(xref)
+                    pix = _extract_pixmap(doc, xref, smask_xref)
                 except Exception:
+                    # Fallback: raw byte extraction (simple images w/o mask)
+                    try:
+                        base_image = doc.extract_image(xref)
+                        if not base_image:
+                            continue
+                        img_bytes = base_image["image"]
+                        img_w = base_image.get("width", 0)
+                        img_h = base_image.get("height", 0)
+                        if img_w < min_width or img_h < min_height or len(img_bytes) < min_bytes:
+                            skipped += 1
+                            continue
+                        ext = base_image["ext"]
+                        filename = f"{note_id}_{idx:02d}.{ext}"
+                        filepath = os.path.join(output_dir, filename)
+                        with open(filepath, "wb") as f:
+                            f.write(img_bytes)
+                        extracted.append({
+                            "filename": filename,
+                            "size": len(img_bytes),
+                            "width": img_w,
+                            "height": img_h,
+                            "ext": ext,
+                            "source": "pdf-extraction",
+                            "page": page_num + 1,
+                        })
+                        idx += 1
+                    except Exception:
+                        pass
                     continue
 
-                if not base_image:
-                    continue
-
-                img_bytes = base_image["image"]
-                img_ext = base_image["ext"]
-                img_w = base_image.get("width", 0)
-                img_h = base_image.get("height", 0)
-
-                # Filter small icons/logos
-                if img_w < min_width or img_h < min_height or len(img_bytes) < min_bytes:
+                # Size filter
+                if pix.width < min_width or pix.height < min_height:
                     skipped += 1
                     continue
 
-                filename = f"{note_id}_{idx:02d}.{img_ext}"
+                # Blank / all-black filter
+                if _is_pixmap_blank(pix):
+                    skipped += 1
+                    continue
+
+                # Save as PNG (lossless, universal)
+                filename = f"{note_id}_{idx:02d}.png"
                 filepath = os.path.join(output_dir, filename)
-                with open(filepath, "wb") as f:
-                    f.write(img_bytes)
+                pix.save(filepath)
+                file_size = os.path.getsize(filepath)
+
+                if file_size < min_bytes:
+                    os.remove(filepath)
+                    skipped += 1
+                    continue
 
                 extracted.append({
                     "filename": filename,
-                    "size": len(img_bytes),
-                    "width": img_w,
-                    "height": img_h,
-                    "ext": img_ext,
+                    "size": file_size,
+                    "width": pix.width,
+                    "height": pix.height,
+                    "ext": "png",
                     "source": "pdf-extraction",
                     "page": page_num + 1,
                 })
@@ -213,7 +303,7 @@ def extract_images_from_pdf(pdf_path, output_dir, note_id, start_idx=1,
         doc.close()
 
     if skipped:
-        print(f"  Filtered {skipped} small images/icons")
+        print(f"  Filtered {skipped} small/blank images", file=sys.stderr)
     return extracted
 
 
@@ -323,12 +413,14 @@ def extract_paper_images(input_str, note_id, output_dir):
             arxiv_id = m.group(1)
 
     with tempfile.TemporaryDirectory() as temp_dir:
+        processed_pdfs = set()          # track PDF figures already converted
+
         # Priority 1: arXiv source package images
         if arxiv_id:
             if download_arxiv_source(arxiv_id, temp_dir):
                 source_imgs = find_source_images(temp_dir)
                 if source_imgs:
-                    print(f"\n  Found {len(source_imgs)} images in arXiv source")
+                    print(f"\n  Found {len(source_imgs)} images in arXiv source", file=sys.stderr)
                     for fig in source_imgs:
                         ext = os.path.splitext(fig["filename"])[1].lower()
                         if ext == ".pdf":
@@ -336,12 +428,13 @@ def extract_paper_images(input_str, note_id, output_dir):
                             converted = convert_pdf_figure_to_png(
                                 fig["path"], output_dir, note_id, start_idx=idx
                             )
+                            processed_pdfs.add(os.path.realpath(fig["path"]))
                             for c in converted:
                                 all_images.append(c)
                                 idx += 1
                         elif ext in (".eps", ".svg"):
                             # Skip vector formats that Obsidian can't display inline
-                            print(f"  Skipping vector format: {fig['filename']}")
+                            print(f"  Skipping vector format: {fig['filename']}", file=sys.stderr)
                         else:
                             # Copy raster images directly
                             filename = f"{note_id}_{idx:02d}{ext}"
@@ -356,11 +449,7 @@ def extract_paper_images(input_str, note_id, output_dir):
                             })
                             idx += 1
 
-            # Download PDF if we don't have one locally
-            if not pdf_path:
-                pdf_path = download_arxiv_pdf(arxiv_id, temp_dir)
-
-        # Priority 2: PDF figure files from source package
+        # Priority 2: PDF figure files from source package (skip already processed)
         if arxiv_id and os.path.exists(temp_dir):
             for root, dirs, files in os.walk(temp_dir):
                 for f in files:
@@ -369,6 +458,8 @@ def extract_paper_images(input_str, note_id, output_dir):
                         and f != f"{arxiv_id}.tar.gz"
                         and f != f"{arxiv_id}.pdf"):
                         pdf_fig = os.path.join(root, f)
+                        if os.path.realpath(pdf_fig) in processed_pdfs:
+                            continue
                         try:
                             converted = convert_pdf_figure_to_png(
                                 pdf_fig, output_dir, note_id, start_idx=idx
@@ -379,12 +470,15 @@ def extract_paper_images(input_str, note_id, output_dir):
                         except Exception as e:
                             logger.warning("  Skipping PDF figure %s: %s", f, e)
 
-        # Priority 3: Direct PDF extraction (fallback)
-        if pdf_path and len(all_images) < 3:
-            pdf_imgs = extract_images_from_pdf(
-                pdf_path, output_dir, note_id, start_idx=idx
-            )
-            all_images.extend(pdf_imgs)
+        # Priority 3: Direct PDF extraction (fallback — only if too few images found)
+        if len(all_images) < 3:
+            if not pdf_path and arxiv_id:
+                pdf_path = download_arxiv_pdf(arxiv_id, temp_dir)
+            if pdf_path:
+                pdf_imgs = extract_images_from_pdf(
+                    pdf_path, output_dir, note_id, start_idx=idx
+                )
+                all_images.extend(pdf_imgs)
 
     return all_images
 
@@ -396,7 +490,7 @@ def extract_book_images(input_str, note_id, output_dir):
 
     ext = os.path.splitext(input_str)[1].lower()
     if ext != ".pdf":
-        print(f"  Book is not PDF ({ext}), no images to extract")
+        print(f"  Book is not PDF ({ext}), no images to extract", file=sys.stderr)
         return []
 
     return extract_images_from_pdf(input_str, output_dir, note_id, start_idx=1)
@@ -483,14 +577,16 @@ def main():
     else:
         images = []
 
-    # Output results as JSON
-    result = {
-        "note_id": args.note_id,
-        "type": args.type,
-        "total_images": len(images),
-        "images": images,
-    }
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # Output compact JSON — only fields the skill needs (filename + dimensions)
+    compact = []
+    for img in images:
+        entry = {"filename": img["filename"]}
+        if "width" in img:
+            entry["width"] = img["width"]
+            entry["height"] = img["height"]
+        compact.append(entry)
+    result = {"total": len(compact), "images": compact}
+    print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == "__main__":
