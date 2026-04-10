@@ -224,7 +224,7 @@
 uv run --with flask --with python-frontmatter python webUI/app.py
 ```
 
-服务启动后访问 `http://localhost:5001`（可通过 `PORT` 环境变量覆盖）。
+服务启动后访问 `http://localhost:3008`（可通过 `PORT` 环境变量覆盖）。
 
 ### 🖥️ 界面总览
 

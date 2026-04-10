@@ -169,7 +169,7 @@ webUI/
 
 ```bash
 uv run --with flask --with python-frontmatter python webUI/app.py
-# Runs on http://localhost:5001 by default (override with PORT=8080)
+# Runs on http://localhost:3008 by default (override with PORT=8080)
 ```
 
 ### Key Routes
