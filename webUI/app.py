@@ -1122,7 +1122,7 @@ def api_stats():
 # ── Main ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get("PORT", 3008))
     print(f"Project root: {PROJECT_ROOT}")
     print(f"Vault path:   {VAULT_PATH}")
     print(f"Starting on http://localhost:{port}")
